@@ -141,6 +141,12 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsChatSession {
 
                         self.addr.do_send(private_message)
                     }
+                    Some("subscribe") => {
+                        let subscribe_message: server::SubscribeMessage =
+                            serde_json::from_str(&text).unwrap();
+
+                        self.addr.do_send(subscribe_message)
+                    }
                     _ => println!("Unknown Action"),
                 }
                 // if m.starts_with('/') {
