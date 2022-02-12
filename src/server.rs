@@ -50,6 +50,22 @@ pub struct PrivateMessageContent {
     pub user_id: usize,
 }
 
+#[derive(Message, Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[rtype(result = "()")]
+pub struct SubscribeMessage {
+    pub data: SubscribeMessageContent,
+    pub event: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SubscribeMessageContent {
+    pub content: String,
+    pub created_at: String,
+    pub id: usize,
+    pub to_user_id: usize,
+    pub user_id: usize,
+}
+
 /// Send message to specific room
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -105,10 +121,11 @@ impl ChatServer {
 
 impl ChatServer {
     fn send_private_message(&self, message: &PrivateMessage) {
-        println!("Hmmaahahahha {} {}", message.data.content, message.event)
-        // if let Some(addr) = self.sessions.get(to_user_id) {
-        //     let _ = addr.do_send(Message(message.to_owned()));
-        // }
+        println!("Hmmaahahahha {} {}", message.data.content, message.event);
+        if let Some(addr) = self.sessions.get(&message.data.to_user_id) {
+            println!("Lina Says: {}", &message.data.to_user_id);
+            let _ = addr.do_send(Message(message.data.content.to_owned()));
+        }
     }
     /// Send message to all users in the room
     fn send_message(&self, room: &str, message: &str, skip_id: usize) {
@@ -138,26 +155,23 @@ impl Handler<Connect> for ChatServer {
     type Result = usize;
 
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) -> Self::Result {
-        println!("Someone joined");
-
         // notify all users in same room
         self.send_message(&"Main".to_owned(), "Someone joined", 0);
 
         // register session with random id
-        let id = self.rng.gen::<usize>();
-        self.sessions.insert(id, msg.addr);
+        self.sessions.insert(msg.id, msg.addr);
 
         // auto join session to Main room
         self.rooms
             .entry("Main".to_owned())
             .or_insert_with(HashSet::new)
-            .insert(id);
+            .insert(msg.id);
 
         let count = self.visitor_count.fetch_add(1, Ordering::SeqCst);
         self.send_message("Main", &format!("Total visitors {}", count), 0);
 
         // send id back
-        id
+        msg.id
     }
 }
 
@@ -195,6 +209,14 @@ impl Handler<PrivateMessage> for ChatServer {
     }
 }
 
+/// Handler for private message.
+impl Handler<SubscribeMessage> for ChatServer {
+    type Result = ();
+
+    fn handle(&mut self, msg: SubscribeMessage, _: &mut Context<Self>) {
+        // self.send_private_message(&msg);
+    }
+}
 // /// Handler for Message message.
 // impl Handler<ClientMessage> for ChatServer {
 //     type Result = ();
