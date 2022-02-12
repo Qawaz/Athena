@@ -5,11 +5,13 @@ use std::sync::{
 use std::time::{Duration, Instant};
 
 use actix::*;
+use actix_cors::Cors;
 use actix_files as fs;
-use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::middleware::Logger;
+use actix_web::{http, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
 
-use serde::{Deserialize, Serialize};
+use serde_json::{from_str, Value};
 
 mod server;
 
@@ -24,12 +26,13 @@ async fn chat_route(
     stream: web::Payload,
     srv: web::Data<Addr<server::ChatServer>>,
 ) -> Result<HttpResponse, Error> {
+    println!("catching req here: {:?}", req.headers().get("user_id"));
+
     ws::start(
         WsChatSession {
-            id: 0,
+            id: from_str::<usize>(req.headers().get("user-id").unwrap().to_str().unwrap())
+                .unwrap_or(0),
             hb: Instant::now(),
-            room: "Main".to_owned(),
-            name: None,
             addr: srv.get_ref().clone(),
         },
         &req,
@@ -49,10 +52,6 @@ struct WsChatSession {
     /// Client must send ping at least once per 10 seconds (CLIENT_TIMEOUT),
     /// otherwise we drop connection.
     hb: Instant,
-    /// joined room
-    room: String,
-    /// peer name
-    name: Option<String>,
     /// Chat server
     addr: Addr<server::ChatServer>,
 }
@@ -74,6 +73,7 @@ impl Actor for WsChatSession {
         let addr = ctx.address();
         self.addr
             .send(server::Connect {
+                id: self.id,
                 addr: addr.recipient(),
             })
             .into_actor(self)
@@ -115,7 +115,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsChatSession {
             Ok(msg) => msg,
         };
 
-        println!("WEBSOCKET MESSAGE: {:?}", msg);
+        // println!("WEBSOCKET MESSAGE: {:?}", msg);
 
         match msg {
             ws::Message::Ping(msg) => {
@@ -126,18 +126,21 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsChatSession {
                 self.hb = Instant::now();
             }
             ws::Message::Text(text) => {
-                #[derive(Serialize, Deserialize)]
-                struct QMessage {
-                    event: String,
-                    content: String,
-                }
-
                 let m = text.trim();
 
-                let decode_message: QMessage = serde_json::from_str(m).unwrap();
+                // let qq = r#"{"event": "message","data":"{\"user_id\":5,\"to_user_id\":5, \"content\": \"i am not f ok\"}"}"#;
+                // let decode_message: server::PrivateMessage = serde_json::from_str(m).unwrap();
+                let decode_message: Value = serde_json::from_str(m).unwrap();
 
-                match decode_message.event.as_str() {
-                    "message" => println!("We Got a message: {}", decode_message.content),
+                match decode_message["event"].as_str() {
+                    Some("message") => {
+                        println!("We Got a message: {}", decode_message);
+
+                        let private_message: server::PrivateMessage =
+                            serde_json::from_str(&text).unwrap();
+
+                        self.addr.do_send(private_message)
+                    }
                     _ => println!("Unknown Action"),
                 }
                 // if m.starts_with('/') {
@@ -254,7 +257,32 @@ async fn main() -> std::io::Result<()> {
 
     // Create Http server with websocket support
     HttpServer::new(move || {
+        // Define CORS
+        let cors = Cors::default()
+            .allow_any_method()
+            .allowed_headers(vec![
+                http::header::AUTHORIZATION,
+                http::header::ACCEPT,
+                http::header::CONTENT_TYPE,
+            ])
+            .supports_credentials()
+            .max_age(3600);
+
         App::new()
+            .wrap(cors)
+            .wrap(Logger::new("%a %{User-Agent}i"))
+            .wrap(Logger::default())
+            // .wrap_fn(|req, srv| {
+            //     println!(
+            //         "Hi from start. You requested: {:?} and the request {:?}",
+            //         req.headers().get("user_id"),
+            //         req.head()
+            //     );
+            //     srv.call(req).map(|res| {
+            //         println!("Hi from response");
+            //         res
+            //     })
+            // })
             .data(app_state.clone())
             .data(server.clone())
             // redirect to websocket.html
