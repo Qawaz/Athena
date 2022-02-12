@@ -4,6 +4,7 @@
 
 use actix::prelude::*;
 use rand::{self, rngs::ThreadRng, Rng};
+use serde::{Deserialize, Serialize};
 
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -20,9 +21,10 @@ pub struct Message(pub String);
 /// Message for chat server communications
 
 /// New chat session is created
-#[derive(Message)]
+#[derive(Debug, Message)]
 #[rtype(usize)]
 pub struct Connect {
+    pub id: usize,
     pub addr: Recipient<Message>,
 }
 
@@ -31,6 +33,21 @@ pub struct Connect {
 #[rtype(result = "()")]
 pub struct Disconnect {
     pub id: usize,
+}
+#[derive(Message, Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[rtype(result = "()")]
+pub struct PrivateMessage {
+    pub data: PrivateMessageContent,
+    pub event: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PrivateMessageContent {
+    pub content: String,
+    pub created_at: String,
+    pub id: usize,
+    pub to_user_id: usize,
+    pub user_id: usize,
 }
 
 /// Send message to specific room
@@ -87,6 +104,12 @@ impl ChatServer {
 }
 
 impl ChatServer {
+    fn send_private_message(&self, message: &PrivateMessage) {
+        println!("Hmmaahahahha {} {}", message.data.content, message.event)
+        // if let Some(addr) = self.sessions.get(to_user_id) {
+        //     let _ = addr.do_send(Message(message.to_owned()));
+        // }
+    }
     /// Send message to all users in the room
     fn send_message(&self, room: &str, message: &str, skip_id: usize) {
         if let Some(sessions) = self.rooms.get(room) {
@@ -163,14 +186,23 @@ impl Handler<Disconnect> for ChatServer {
     }
 }
 
-/// Handler for Message message.
-impl Handler<ClientMessage> for ChatServer {
+/// Handler for private message.
+impl Handler<PrivateMessage> for ChatServer {
     type Result = ();
 
-    fn handle(&mut self, msg: ClientMessage, _: &mut Context<Self>) {
-        self.send_message(&msg.room, msg.msg.as_str(), msg.id);
+    fn handle(&mut self, msg: PrivateMessage, _: &mut Context<Self>) {
+        self.send_private_message(&msg);
     }
 }
+
+// /// Handler for Message message.
+// impl Handler<ClientMessage> for ChatServer {
+//     type Result = ();
+
+//     fn handle(&mut self, msg: ClientMessage, _: &mut Context<Self>) {
+//         self.send_private_message(&msg.room, msg.msg.as_str(), msg.id);
+//     }
+// }
 
 /// Handler for `ListRooms` message.
 impl Handler<ListRooms> for ChatServer {
