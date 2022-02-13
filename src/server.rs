@@ -3,7 +3,6 @@
 //! room through `ChatServer`.
 
 use actix::prelude::*;
-use rand::{self, rngs::ThreadRng, Rng};
 use serde::{Deserialize, Serialize};
 
 use std::sync::{
@@ -100,7 +99,6 @@ pub struct Join {
 pub struct ChatServer {
     sessions: HashMap<usize, Recipient<Message>>,
     rooms: HashMap<String, HashSet<usize>>,
-    rng: ThreadRng,
     visitor_count: Arc<AtomicUsize>,
 }
 
@@ -113,7 +111,6 @@ impl ChatServer {
         ChatServer {
             sessions: HashMap::new(),
             rooms,
-            rng: rand::thread_rng(),
             visitor_count,
         }
     }
@@ -124,7 +121,7 @@ impl ChatServer {
         println!("Hmmaahahahha {} {}", message.data.content, message.event);
         if let Some(addr) = self.sessions.get(&message.data.to_user_id) {
             println!("Lina Says: {}", &message.data.to_user_id);
-            let _ = addr.do_send(Message(message.data.content.to_owned()));
+            let _ = addr.do_send(Message(serde_json::to_string(message).unwrap()));
         }
     }
     /// Send message to all users in the room
