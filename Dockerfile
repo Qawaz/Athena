@@ -1,11 +1,16 @@
-FROM rust:1.58.1-alpine3.14
+FROM ekidd/rust-musl-builder:latest as builder
 
-RUN apk --no-cache add make gcc g++ musl-dev binutils build-base
-
-COPY ./ ./
+ADD --chown=rust:rust . ./
 
 RUN cargo build --release
 
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates
+COPY --from=builder \
+    /home/rust/src/target/x86_64-unknown-linux-musl/release/whisper-rust \
+    /usr/local/bin/
+
 EXPOSE 3335
 
-CMD ["./target/release/whisper"]
+CMD ["/usr/local/bin/whisper-rust"]
