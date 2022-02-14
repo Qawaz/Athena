@@ -1,6 +1,6 @@
 FROM rust:1.58.1-alpine3.14
 
-RUN apk --no-cache add make gcc g++
+RUN apk --no-cache add make gcc g++ musl-dev binutils build-base
 
 COPY ./ ./
 
