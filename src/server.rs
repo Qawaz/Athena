@@ -3,7 +3,9 @@
 //! room through `ChatServer`.
 
 use actix::prelude::*;
+use diesel::PgConnection;
 use serde::{Deserialize, Serialize};
+use whisper::{establish_connection, message_repository::create_message, models::CreateMessage};
 
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -49,22 +51,6 @@ pub struct PrivateMessageContent {
     pub user_id: usize,
 }
 
-#[derive(Message, Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[rtype(result = "()")]
-pub struct SubscribeMessage {
-    pub data: SubscribeMessageContent,
-    pub event: String,
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SubscribeMessageContent {
-    pub content: String,
-    pub created_at: String,
-    pub id: usize,
-    pub to_user_id: usize,
-    pub user_id: usize,
-}
-
 /// Send message to specific room
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -100,6 +86,7 @@ pub struct ChatServer {
     sessions: HashMap<usize, Recipient<Message>>,
     rooms: HashMap<String, HashSet<usize>>,
     visitor_count: Arc<AtomicUsize>,
+    connection: PgConnection,
 }
 
 impl ChatServer {
@@ -108,10 +95,13 @@ impl ChatServer {
         let mut rooms = HashMap::new();
         rooms.insert("Main".to_owned(), HashSet::new());
 
+        let connection = establish_connection();
+
         ChatServer {
             sessions: HashMap::new(),
             rooms,
             visitor_count,
+            connection,
         }
     }
 }
@@ -202,26 +192,20 @@ impl Handler<PrivateMessage> for ChatServer {
     type Result = ();
 
     fn handle(&mut self, msg: PrivateMessage, _: &mut Context<Self>) {
+        create_message(
+            CreateMessage {
+                user_id: *&msg.data.user_id as i32,
+                to_user_id: *&msg.data.to_user_id as i32,
+                content: (*msg.data.content).to_string(),
+            },
+            &self.connection,
+        )
+        .unwrap();
+
+        // broadcast to target
         self.send_private_message(&msg);
     }
 }
-
-/// Handler for private message.
-impl Handler<SubscribeMessage> for ChatServer {
-    type Result = ();
-
-    fn handle(&mut self, msg: SubscribeMessage, _: &mut Context<Self>) {
-        // self.send_private_message(&msg);
-    }
-}
-// /// Handler for Message message.
-// impl Handler<ClientMessage> for ChatServer {
-//     type Result = ();
-
-//     fn handle(&mut self, msg: ClientMessage, _: &mut Context<Self>) {
-//         self.send_private_message(&msg.room, msg.msg.as_str(), msg.id);
-//     }
-// }
 
 /// Handler for `ListRooms` message.
 impl Handler<ListRooms> for ChatServer {
