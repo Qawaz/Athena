@@ -1,3 +1,6 @@
+extern crate diesel;
+extern crate whisper;
+
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -10,7 +13,6 @@ use actix_files as fs;
 use actix_web::middleware::Logger;
 use actix_web::{http, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
-
 use serde_json::{from_str, Value};
 
 mod server;
@@ -26,8 +28,6 @@ async fn chat_route(
     stream: web::Payload,
     srv: web::Data<Addr<server::ChatServer>>,
 ) -> Result<HttpResponse, Error> {
-    println!("catching req here: {:?}", req.headers().get("user_id"));
-
     ws::start(
         WsChatSession {
             id: from_str::<usize>(req.headers().get("user-id").unwrap().to_str().unwrap())
@@ -115,7 +115,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsChatSession {
             Ok(msg) => msg,
         };
 
-        // println!("WEBSOCKET MESSAGE: {:?}", msg);
+        println!("WEBSOCKET MESSAGE: {:?}", msg);
 
         match msg {
             ws::Message::Ping(msg) => {
@@ -128,88 +128,17 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsChatSession {
             ws::Message::Text(text) => {
                 let m = text.trim();
 
-                // let qq = r#"{"event": "message","data":"{\"user_id\":5,\"to_user_id\":5, \"content\": \"i am not f ok\"}"}"#;
-                // let decode_message: server::PrivateMessage = serde_json::from_str(m).unwrap();
                 let decode_message: Value = serde_json::from_str(m).unwrap();
 
                 match decode_message["event"].as_str() {
                     Some("message") => {
-                        println!("We Got a message: {}", decode_message);
-
                         let private_message: server::PrivateMessage =
                             serde_json::from_str(&text).unwrap();
 
                         self.addr.do_send(private_message)
                     }
-                    Some("subscribe") => {
-                        let subscribe_message: server::SubscribeMessage =
-                            serde_json::from_str(&text).unwrap();
-
-                        self.addr.do_send(subscribe_message)
-                    }
                     _ => println!("Unknown Action"),
                 }
-                // if m.starts_with('/') {
-                //     let v: Vec<&str> = m.splitn(2, ' ').collect();
-                //     match v[0] {
-                //         "/list" => {
-                //             // Send ListRooms message to chat server and wait for
-                //             // response
-                //             println!("List rooms");
-                //             self.addr
-                //                 .send(server::ListRooms)
-                //                 .into_actor(self)
-                //                 .then(|res, _, ctx| {
-                //                     match res {
-                //                         Ok(rooms) => {
-                //                             for room in rooms {
-                //                                 ctx.text(room);
-                //                             }
-                //                         }
-                //                         _ => println!("Something is wrong"),
-                //                     }
-                //                     fut::ready(())
-                //                 })
-                //                 .wait(ctx)
-                //             // .wait(ctx) pauses all events in context,
-                //             // so actor wont receive any new messages until it get list
-                //             // of rooms back
-                //         }
-                //         "/join" => {
-                //             if v.len() == 2 {
-                //                 self.room = v[1].to_owned();
-                //                 self.addr.do_send(server::Join {
-                //                     id: self.id,
-                //                     name: self.room.clone(),
-                //                 });
-
-                //                 ctx.text("joined");
-                //             } else {
-                //                 ctx.text("!!! room name is required");
-                //             }
-                //         }
-                //         "/name" => {
-                //             if v.len() == 2 {
-                //                 self.name = Some(v[1].to_owned());
-                //             } else {
-                //                 ctx.text("!!! name is required");
-                //             }
-                //         }
-                //         _ => ctx.text(format!("!!! unknown command: {:?}", m)),
-                //     }
-                // } else {
-                //     let msg = if let Some(ref name) = self.name {
-                //         format!("{}: {}", name, m)
-                //     } else {
-                //         m.to_owned()
-                //     };
-                //     // send message to chat server
-                //     self.addr.do_send(server::ClientMessage {
-                //         id: self.id,
-                //         msg,
-                //         room: self.room.clone(),
-                //     })
-                // }
             }
             ws::Message::Binary(_) => println!("Unexpected binary"),
             ws::Message::Close(reason) => {
