@@ -207,17 +207,6 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .wrap(Logger::new("%a %{User-Agent}i"))
             .wrap(Logger::default())
-            // .wrap_fn(|req, srv| {
-            //     println!(
-            //         "Hi from start. You requested: {:?} and the request {:?}",
-            //         req.headers().get("user_id"),
-            //         req.head()
-            //     );
-            //     srv.call(req).map(|res| {
-            //         println!("Hi from response");
-            //         res
-            //     })
-            // })
             .data(app_state.clone())
             .data(server.clone())
             // redirect to websocket.html
@@ -232,7 +221,7 @@ async fn main() -> std::io::Result<()> {
             // static resources
             .service(fs::Files::new("/static/", "static/"))
     })
-    .bind("127.0.0.1:8080")?
+    .bind("127.0.0.1:3335")?
     .run()
     .await
 }
