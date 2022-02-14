@@ -3,27 +3,6 @@
 version = 3
 
 [[package]]
-name = "WhisperMessenger"
-version = "0.1.0"
-dependencies = [
- "actix",
- "actix-cors",
- "actix-files",
- "actix-web",
- "actix-web-actors",
- "byteorder",
- "bytes 0.5.6",
- "chrono",
- "diesel",
- "dotenv",
- "env_logger",
- "futures",
- "serde",
- "serde_json",
- "serde_with",
-]
-
-[[package]]
 name = "actix"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2141,6 +2120,27 @@ name = "wasm-bindgen-shared"
 version = "0.2.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d958d035c4438e28c70e4321a2911302f10135ce78a9c7834c0cab4123d06a2"
+
+[[package]]
+name = "whisper"
+version = "0.1.0"
+dependencies = [
+ "actix",
+ "actix-cors",
+ "actix-files",
+ "actix-web",
+ "actix-web-actors",
+ "byteorder",
+ "bytes 0.5.6",
+ "chrono",
+ "diesel",
+ "dotenv",
+ "env_logger",
+ "futures",
+ "serde",
+ "serde_json",
+ "serde_with",
+]
 
 [[package]]
 name = "widestring"
