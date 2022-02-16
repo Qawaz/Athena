@@ -136,7 +136,7 @@ impl ChatServer {
         let assigned_message = PrivateMessage {
             event: "assigned_message".to_owned(),
             data: PrivateMessageContent {
-                local_id: local_id,
+                local_id,
                 id: saved_message.id as usize,
                 user_id: saved_message.user_id as usize,
                 to_user_id: saved_message.to_user_id as usize,
