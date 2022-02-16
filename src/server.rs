@@ -1,11 +1,11 @@
-//! `ChatServer` is an actor. It maintains list of connection client session.
-//! And manages available rooms. Peers send messages to other peers in same
-//! room through `ChatServer`.
-
 use actix::prelude::*;
 use diesel::PgConnection;
 use serde::{Deserialize, Serialize};
-use whisper::{establish_connection, message_repository::create_message, models::CreateMessage};
+use whisper::{
+    establish_connection,
+    message_repository::create_message,
+    models::{self, CreateMessage},
+};
 
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -38,17 +38,18 @@ pub struct Disconnect {
 #[derive(Message, Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[rtype(result = "()")]
 pub struct PrivateMessage {
-    pub data: PrivateMessageContent,
     pub event: String,
+    pub data: PrivateMessageContent,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PrivateMessageContent {
-    pub content: String,
-    pub created_at: String,
+    pub local_id: Option<usize>,
     pub id: usize,
     pub to_user_id: usize,
     pub user_id: usize,
+    pub content: String,
+    pub created_at: Option<String>,
 }
 
 /// Send message to specific room
@@ -107,11 +108,45 @@ impl ChatServer {
 }
 
 impl ChatServer {
-    fn send_private_message(&self, message: &PrivateMessage) {
-        println!("Hmmaahahahha {} {}", message.data.content, message.event);
-        if let Some(addr) = self.sessions.get(&message.data.to_user_id) {
-            println!("Lina Says: {}", &message.data.to_user_id);
-            let _ = addr.do_send(Message(serde_json::to_string(message).unwrap()));
+    fn send_private_message(&self, saved_message: &models::Message) {
+        let broadcast_private_message = PrivateMessage {
+            event: "message".to_owned(),
+            data: PrivateMessageContent {
+                local_id: Some(0),
+                id: saved_message.id as usize,
+                user_id: saved_message.user_id as usize,
+                to_user_id: saved_message.to_user_id as usize,
+                content: saved_message.content.clone(),
+                created_at: Some(saved_message.created_at.to_string()),
+            },
+        };
+
+        if let Some(addr) = self.sessions.get(&(saved_message.to_user_id as usize)) {
+            let _ = addr.do_send(Message(
+                serde_json::to_string(&broadcast_private_message).unwrap(),
+            ));
+        }
+    }
+
+    fn return_assigned_message_to_owner(
+        &self,
+        saved_message: &models::Message,
+        local_id: Option<usize>,
+    ) {
+        let assigned_message = PrivateMessage {
+            event: "assigned_message".to_owned(),
+            data: PrivateMessageContent {
+                local_id: local_id,
+                id: saved_message.id as usize,
+                user_id: saved_message.user_id as usize,
+                to_user_id: saved_message.to_user_id as usize,
+                content: saved_message.content.clone(),
+                created_at: Some(saved_message.created_at.to_string()),
+            },
+        };
+
+        if let Some(addr) = self.sessions.get(&(saved_message.user_id as usize)) {
+            let _ = addr.do_send(Message(serde_json::to_string(&assigned_message).unwrap()));
         }
     }
     /// Send message to all users in the room
@@ -192,7 +227,7 @@ impl Handler<PrivateMessage> for ChatServer {
     type Result = ();
 
     fn handle(&mut self, msg: PrivateMessage, _: &mut Context<Self>) {
-        create_message(
+        let saved_message = create_message(
             CreateMessage {
                 user_id: *&msg.data.user_id as i32,
                 to_user_id: *&msg.data.to_user_id as i32,
@@ -203,7 +238,10 @@ impl Handler<PrivateMessage> for ChatServer {
         .unwrap();
 
         // broadcast to target
-        self.send_private_message(&msg);
+        self.send_private_message(&saved_message);
+
+        // return to owner with assigned id and date
+        self.return_assigned_message_to_owner(&saved_message, msg.data.local_id)
     }
 }
 

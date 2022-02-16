@@ -1,7 +1,7 @@
 use super::schema::messages;
 use diesel::{Insertable, Queryable};
 
-#[derive(Queryable, Insertable)]
+#[derive(Debug, Queryable, Insertable)]
 pub struct Message {
     pub id: i32,
     pub user_id: i32,
