@@ -1,6 +1,5 @@
-extern crate openssl;
-#[macro_use]
 extern crate diesel;
+extern crate openssl;
 extern crate whisper;
 
 use std::sync::{
