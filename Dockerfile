@@ -11,6 +11,4 @@ COPY --from=builder \
     /home/rust/src/target/x86_64-unknown-linux-musl/release/whisper \
     /usr/local/bin/
 
-EXPOSE 3335
-
 CMD ["/usr/local/bin/whisper"]
