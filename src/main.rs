@@ -1,5 +1,6 @@
 extern crate openssl;
 #[macro_use]
+extern crate diesel_migrations;
 extern crate diesel;
 extern crate whisper;
 
@@ -16,8 +17,11 @@ use actix_web::middleware::Logger;
 use actix_web::{http, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
 use serde_json::{from_str, Value};
+use whisper::establish_connection;
 
 mod server;
+
+embed_migrations!("./migrations");
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -182,6 +186,10 @@ impl WsChatSession {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
+
+    let connection = establish_connection();
+
+    embedded_migrations::run(&connection).unwrap();
 
     // App state
     // We are keeping a count of the number of visitors
