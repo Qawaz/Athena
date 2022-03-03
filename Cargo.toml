@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-actix = "0.10"
+actix = "0.12"
 actix-web = "4.0.1"
 actix-web-actors = "3"
 actix-files = "0.3"
