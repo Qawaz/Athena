@@ -4,28 +4,25 @@ extern crate diesel_migrations;
 extern crate diesel;
 extern crate whisper;
 
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
-};
-use std::time::{Duration, Instant};
+use std::env;
+use std::time::Instant;
 
 use actix::*;
 use actix_cors::Cors;
-use actix_web::middleware::Logger;
-use actix_web::{http, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::web::Data;
+use actix_web::{http, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
-use serde_json::{from_str, Value};
-use whisper::establish_connection;
-
+use diesel::r2d2::ConnectionManager;
+use diesel::r2d2::Pool;
+use diesel::PgConnection;
+use dotenv::dotenv;
+use serde_json::from_str;
+use session::WsChatSession;
+use whisper::db::DbExecutor;
 mod server;
+mod session;
 
 embed_migrations!("./migrations");
-
-/// How often heartbeat pings are sent
-const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
-/// How long before lack of client response causes a timeout
-const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Entry point for our websocket route
 async fn chat_route(
@@ -45,161 +42,40 @@ async fn chat_route(
     )
 }
 
-///  Displays and affects state
-async fn get_count(count: web::Data<Arc<AtomicUsize>>) -> impl Responder {
-    let current_count = count.fetch_add(1, Ordering::SeqCst);
-    format!("Visitors: {}", current_count)
-}
-
-struct WsChatSession {
-    /// unique session id
-    id: usize,
-    /// Client must send ping at least once per 10 seconds (CLIENT_TIMEOUT),
-    /// otherwise we drop connection.
-    hb: Instant,
-    /// Chat server
-    addr: Addr<server::ChatServer>,
-}
-
-impl Actor for WsChatSession {
-    type Context = ws::WebsocketContext<Self>;
-
-    /// Method is called on actor start.
-    /// We register ws session with ChatServer
-    fn started(&mut self, ctx: &mut Self::Context) {
-        // we'll start heartbeat process on session start.
-        self.hb(ctx);
-
-        // register self in chat server. `AsyncContext::wait` register
-        // future within context, but context waits until this future resolves
-        // before processing any other events.
-        // HttpContext::state() is instance of WsChatSessionState, state is shared
-        // across all routes within application
-        let addr = ctx.address();
-        self.addr
-            .send(server::Connect {
-                id: self.id,
-                addr: addr.recipient(),
-            })
-            .into_actor(self)
-            .then(|res, act, ctx| {
-                match res {
-                    Ok(res) => act.id = res,
-                    // something is wrong with chat server
-                    _ => ctx.stop(),
-                }
-                fut::ready(())
-            })
-            .wait(ctx);
-    }
-
-    fn stopping(&mut self, _: &mut Self::Context) -> Running {
-        // notify chat server
-        self.addr.do_send(server::Disconnect { id: self.id });
-        Running::Stop
-    }
-}
-
-/// Handle messages from chat server, we simply send it to peer websocket
-impl Handler<server::Message> for WsChatSession {
-    type Result = ();
-
-    fn handle(&mut self, msg: server::Message, ctx: &mut Self::Context) {
-        ctx.text(msg.0);
-    }
-}
-
-/// WebSocket message handler
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsChatSession {
-    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-        let msg = match msg {
-            Err(_) => {
-                ctx.stop();
-                return;
-            }
-            Ok(msg) => msg,
-        };
-
-        match msg {
-            ws::Message::Ping(msg) => {
-                self.hb = Instant::now();
-                ctx.pong(&msg);
-            }
-            ws::Message::Pong(_) => {
-                self.hb = Instant::now();
-            }
-            ws::Message::Text(text) => {
-                let m = text.trim();
-
-                let decode_message: Value = serde_json::from_str(m).unwrap();
-
-                match decode_message["event"].as_str() {
-                    Some("message") => {
-                        let private_message: server::PrivateMessage =
-                            serde_json::from_str(&text).unwrap();
-
-                        self.addr.do_send(private_message)
-                    }
-                    _ => println!("Unknown Action"),
-                }
-            }
-            ws::Message::Binary(_) => println!("Unexpected binary"),
-            ws::Message::Close(reason) => {
-                ctx.close(reason);
-                ctx.stop();
-            }
-            ws::Message::Continuation(_) => {
-                ctx.stop();
-            }
-            ws::Message::Nop => (),
-        }
-    }
-}
-
-impl WsChatSession {
-    /// helper method that sends ping to client every second.
-    ///
-    /// also this method checks heartbeats from client
-    fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
-        ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
-            // check client heartbeats
-            if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
-                // heartbeat timed out
-                println!("Websocket Client heartbeat failed, disconnecting!");
-
-                // notify chat server
-                act.addr.do_send(server::Disconnect { id: act.id });
-
-                // stop actor
-                ctx.stop();
-
-                // don't try to send a ping
-                return;
-            }
-
-            ctx.ping(b"");
-        });
-    }
-}
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    std::env::set_var("RUST_LOG", "actix_web=trace");
     env_logger::init();
 
-    let connection = establish_connection();
+    dotenv().ok();
 
-    embedded_migrations::run(&connection).unwrap();
+    let gateway_database_url =
+        env::var("GATEWAY_DATABASE_URL").expect("GATEWAY_DATABASE_URL must be set");
+    let gateway_manager = ConnectionManager::<PgConnection>::new(gateway_database_url);
 
-    // App state
-    // We are keeping a count of the number of visitors
-    let app_state = Arc::new(AtomicUsize::new(0));
+    let gateway_pool = Pool::builder()
+        .build(gateway_manager)
+        .expect("Failed to create pool.");
 
-    // Start chat server actor
-    let server = server::ChatServer::new(app_state.clone()).start();
+    let own_database_url = env::var("OWN_DATABASE_URL").expect("OWN_DATABASE_URL must be set");
+    let own_manager = ConnectionManager::<PgConnection>::new(own_database_url);
+
+    let own_pool = Pool::builder()
+        .build(own_manager)
+        .expect("Failed to create pool.");
+
+    embedded_migrations::run(&own_pool.get().expect("cant get connection pool")).unwrap();
+
+    let own_pool_clone = own_pool.clone();
+    let addr = Data::new(SyncArbiter::start(12, move || {
+        DbExecutor(own_pool_clone.clone(), gateway_pool.clone())
+    }));
+
+    // // Start chat server actor
+    let server = server::ChatServer::new(own_pool.clone()).start();
 
     // Create Http server with websocket support
     HttpServer::new(move || {
-        // Define CORS
         let cors = Cors::default()
             .allow_any_method()
             .allowed_headers(vec![
@@ -212,16 +88,11 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .wrap(cors)
-            .wrap(Logger::new("%a %{User-Agent}i"))
-            .wrap(Logger::default())
-            .app_data(app_state.clone())
-            .app_data(server.clone())
-            // redirect to websocket.html
-            .route("/count/", web::get().to(get_count))
-            // websocket
-            .service(web::resource("/ws/").to(chat_route))
+            .app_data(web::Data::new(addr.clone()))
+            .app_data(web::Data::new(server.clone()))
+            .route("/ws/", web::get().to(chat_route))
     })
-    .bind("0.0.0.0:3335")?
+    .bind(("0.0.0.0", 3335))?
     .run()
     .await
 }
