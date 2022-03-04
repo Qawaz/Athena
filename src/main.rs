@@ -12,7 +12,6 @@ use std::time::{Duration, Instant};
 
 use actix::*;
 use actix_cors::Cors;
-use actix_files as fs;
 use actix_web::middleware::Logger;
 use actix_web::{http, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
@@ -215,19 +214,12 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .wrap(Logger::new("%a %{User-Agent}i"))
             .wrap(Logger::default())
-            .data(app_state.clone())
-            .data(server.clone())
+            .app_data(app_state.clone())
+            .app_data(server.clone())
             // redirect to websocket.html
-            .service(web::resource("/").route(web::get().to(|| {
-                HttpResponse::Found()
-                    .header("LOCATION", "/static/websocket.html")
-                    .finish()
-            })))
             .route("/count/", web::get().to(get_count))
             // websocket
             .service(web::resource("/ws/").to(chat_route))
-            // static resources
-            .service(fs::Files::new("/static/", "static/"))
     })
     .bind("0.0.0.0:3335")?
     .run()
