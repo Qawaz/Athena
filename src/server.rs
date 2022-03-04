@@ -1,15 +1,12 @@
 use actix::prelude::*;
-use diesel::PgConnection;
+use diesel::{
+    r2d2::{ConnectionManager, Pool},
+    PgConnection,
+};
 use serde::{Deserialize, Serialize};
 use whisper::{
-    establish_connection,
     message_repository::create_message,
     models::{self, CreateMessage},
-};
-
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
 };
 
 use std::collections::{HashMap, HashSet};
@@ -86,23 +83,19 @@ pub struct Join {
 pub struct ChatServer {
     sessions: HashMap<usize, Recipient<Message>>,
     rooms: HashMap<String, HashSet<usize>>,
-    visitor_count: Arc<AtomicUsize>,
-    connection: PgConnection,
+    own_pool: Pool<ConnectionManager<PgConnection>>,
 }
 
 impl ChatServer {
-    pub fn new(visitor_count: Arc<AtomicUsize>) -> ChatServer {
+    pub fn new(own_pool: Pool<ConnectionManager<PgConnection>>) -> ChatServer {
         // default room
         let mut rooms = HashMap::new();
         rooms.insert("Main".to_owned(), HashSet::new());
 
-        let connection = establish_connection();
-
         ChatServer {
             sessions: HashMap::new(),
             rooms,
-            visitor_count,
-            connection,
+            own_pool,
         }
     }
 }
@@ -189,9 +182,6 @@ impl Handler<Connect> for ChatServer {
             .or_insert_with(HashSet::new)
             .insert(msg.id);
 
-        let count = self.visitor_count.fetch_add(1, Ordering::SeqCst);
-        self.send_message("Main", &format!("Total visitors {}", count), 0);
-
         // send id back
         msg.id
     }
@@ -233,7 +223,7 @@ impl Handler<PrivateMessage> for ChatServer {
                 to_user_id: *&msg.data.to_user_id as i32,
                 content: (*msg.data.content).to_string(),
             },
-            &self.connection,
+            &self.own_pool.get().unwrap(),
         )
         .unwrap();
 
