@@ -17,10 +17,10 @@ use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel::PgConnection;
 use dotenv::dotenv;
-use serde_json::from_str;
 use session::WsChatSession;
 use whisper::db::DbExecutor;
 use whisper::extractors::http_auth_extractor::http_auth_extract;
+use whisper::extractors::jwt_data_decode::Auth;
 mod server;
 mod session;
 
@@ -31,11 +31,12 @@ async fn chat_route(
     req: HttpRequest,
     stream: web::Payload,
     srv: web::Data<Addr<server::ChatServer>>,
+    sub: Auth,
 ) -> Result<HttpResponse, Error> {
+    println!("{:?}", sub);
     ws::start(
         WsChatSession {
-            id: from_str::<usize>(req.headers().get("user-id").unwrap().to_str().unwrap())
-                .unwrap_or(0),
+            id: sub.user_id as usize,
             hb: Instant::now(),
             addr: srv.get_ref().clone(),
         },
