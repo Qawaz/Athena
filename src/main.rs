@@ -33,7 +33,6 @@ async fn chat_route(
     srv: web::Data<Addr<server::ChatServer>>,
     sub: Auth,
 ) -> Result<HttpResponse, Error> {
-    println!("{:?}", sub);
     ws::start(
         WsChatSession {
             id: sub.user_id as usize,
