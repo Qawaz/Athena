@@ -12,13 +12,15 @@ use actix_cors::Cors;
 use actix_web::web::Data;
 use actix_web::{http, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
+use actix_web_httpauth::middleware::HttpAuthentication;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel::PgConnection;
 use dotenv::dotenv;
-use serde_json::from_str;
 use session::WsChatSession;
 use whisper::db::DbExecutor;
+use whisper::extractors::http_auth_extractor::http_auth_extract;
+use whisper::extractors::jwt_data_decode::Auth;
 mod server;
 mod session;
 
@@ -29,11 +31,11 @@ async fn chat_route(
     req: HttpRequest,
     stream: web::Payload,
     srv: web::Data<Addr<server::ChatServer>>,
+    sub: Auth,
 ) -> Result<HttpResponse, Error> {
     ws::start(
         WsChatSession {
-            id: from_str::<usize>(req.headers().get("user-id").unwrap().to_str().unwrap())
-                .unwrap_or(0),
+            id: sub.user_id as usize,
             hb: Instant::now(),
             addr: srv.get_ref().clone(),
         },
@@ -86,10 +88,13 @@ async fn main() -> std::io::Result<()> {
             .supports_credentials()
             .max_age(3600);
 
+        let auth = HttpAuthentication::bearer(http_auth_extract);
+
         App::new()
             .wrap(cors)
             .app_data(web::Data::new(addr.clone()))
             .app_data(web::Data::new(server.clone()))
+            .wrap(auth)
             .route("/ws/", web::get().to(chat_route))
     })
     .bind(("0.0.0.0", 3335))?
