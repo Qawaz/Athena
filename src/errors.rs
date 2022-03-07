@@ -4,6 +4,9 @@ use diesel::result::{DatabaseErrorKind, Error as DBError};
 
 #[derive(Debug, Display)]
 pub enum ServiceError {
+    #[display(fmt = "Not Found")]
+    NotFound,
+
     #[display(fmt = "Internal Server Error")]
     InternalServerError,
 
@@ -30,6 +33,7 @@ pub enum ServiceError {
 impl ResponseError for ServiceError {
     fn error_response(&self) -> HttpResponse {
         match self {
+            ServiceError::NotFound => HttpResponse::NotFound().json("Not Found"),
             ServiceError::InternalServerError => {
                 HttpResponse::InternalServerError().json("Internal Server Error, Please try later")
             }
@@ -45,6 +49,23 @@ impl ResponseError for ServiceError {
     }
 }
 
+// impl From<diesel::result::Error> for ServiceError {
+//     fn from(error: diesel::result::Error) -> ServiceError {
+//         match error {
+//             diesel::result::Error::NotFound => HttpResponse::NotFound().body("Not Found"),
+//             DBError::InvalidCString(_) => todo!(),
+//             DBError::DatabaseError(_, _) => todo!(),
+//             DBError::NotFound => todo!(),
+//             DBError::QueryBuilderError(_) => todo!(),
+//             DBError::DeserializationError(_) => todo!(),
+//             DBError::SerializationError(_) => todo!(),
+//             DBError::RollbackTransaction => todo!(),
+//             DBError::AlreadyInTransaction => todo!(),
+//             _ => todo!(),
+//         }
+//     }
+// }
+
 impl From<DBError> for ServiceError {
     fn from(error: DBError) -> ServiceError {
         // Right now we just care about UniqueViolation from diesel
@@ -57,6 +78,7 @@ impl From<DBError> for ServiceError {
                 }
                 ServiceError::InternalServerError
             }
+            DBError::NotFound => ServiceError::NotFound,
             _ => ServiceError::InternalServerError,
         }
     }
