@@ -3,7 +3,7 @@ use crate::schema::profiles;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Queryable, Identifiable, Serialize, Associations, Deserialize)]
+#[derive(Debug, Clone, Queryable, Identifiable, Serialize, Associations, Deserialize)]
 #[belongs_to(User)]
 pub struct Profile {
     pub id: i32,
