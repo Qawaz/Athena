@@ -1,4 +1,13 @@
 table! {
+    followers (id) {
+        id -> Int4,
+        user_id -> Int4,
+        following -> Int4,
+        created_at -> Timestamp,
+    }
+}
+
+table! {
     users (id) {
         id -> Int4,
         solana_pubkey -> Nullable<Varchar>,
@@ -37,4 +46,4 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(users, messages, profiles,);
+allow_tables_to_appear_in_same_query!(followers, messages, profiles, users);
