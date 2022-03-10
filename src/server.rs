@@ -4,12 +4,11 @@ use diesel::{
     PgConnection,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use whisper::{
     message_repository::create_message,
-    models::{self, CreateMessage},
+    models::{self, message::CreateMessage},
 };
-
-use std::collections::{HashMap, HashSet};
 
 /// Chat server sends this messages to session
 #[derive(Message)]
@@ -101,7 +100,7 @@ impl ChatServer {
 }
 
 impl ChatServer {
-    fn send_private_message(&self, saved_message: &models::Message) {
+    fn send_private_message(&self, saved_message: &models::message::Message) {
         let broadcast_private_message = PrivateMessage {
             event: "message".to_owned(),
             data: PrivateMessageContent {
@@ -123,7 +122,7 @@ impl ChatServer {
 
     fn return_assigned_message_to_owner(
         &self,
-        saved_message: &models::Message,
+        saved_message: &models::message::Message,
         local_id: Option<usize>,
     ) {
         let assigned_message = PrivateMessage {

@@ -1,4 +1,4 @@
-use crate::models::{CreateMessage, Message};
+use crate::models::message::{CreateMessage, Message};
 use crate::schema::messages;
 use crate::schema::messages::dsl::*;
 use diesel;

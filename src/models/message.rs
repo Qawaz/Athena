@@ -1,4 +1,4 @@
-use super::schema::messages;
+use crate::schema::messages;
 use diesel::{Insertable, Queryable};
 
 #[derive(Debug, Queryable, Insertable)]

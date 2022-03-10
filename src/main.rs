@@ -10,7 +10,7 @@ use std::time::Instant;
 use actix::*;
 use actix_cors::Cors;
 use actix_web::web::Data;
-use actix_web::{http, web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{get, http, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use actix_web_httpauth::middleware::HttpAuthentication;
 use diesel::r2d2::ConnectionManager;
@@ -18,6 +18,8 @@ use diesel::r2d2::Pool;
 use diesel::PgConnection;
 use dotenv::dotenv;
 use session::WsChatSession;
+use whisper::controllers::search_controller::search_users;
+use whisper::controllers::user_controller::get_user_by_id;
 use whisper::db::DbExecutor;
 use whisper::extractors::http_auth_extractor::http_auth_extract;
 use whisper::extractors::jwt_data_decode::Auth;
@@ -27,6 +29,7 @@ mod session;
 embed_migrations!("./migrations");
 
 /// Entry point for our websocket route
+#[get("/ws/")]
 async fn chat_route(
     req: HttpRequest,
     stream: web::Payload,
@@ -59,7 +62,7 @@ async fn main() -> std::io::Result<()> {
         .build(gateway_manager)
         .expect("Failed to create pool.");
 
-    let own_database_url = env::var("OWN_DATABASE_URL").expect("OWN_DATABASE_URL must be set");
+    let own_database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let own_manager = ConnectionManager::<PgConnection>::new(own_database_url);
 
     let own_pool = Pool::builder()
@@ -74,7 +77,7 @@ async fn main() -> std::io::Result<()> {
     }));
 
     // // Start chat server actor
-    let server = server::ChatServer::new(own_pool.clone()).start();
+    let server = Data::new(server::ChatServer::new(own_pool.clone()).start());
 
     // Create Http server with websocket support
     HttpServer::new(move || {
@@ -92,10 +95,11 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .wrap(cors)
-            .app_data(web::Data::new(addr.clone()))
-            .app_data(web::Data::new(server.clone()))
-            .wrap(auth)
-            .route("/ws/", web::get().to(chat_route))
+            .app_data(addr.clone())
+            .app_data(server.clone())
+            .service(web::scope("/search").service(search_users))
+            .service(web::scope("/user").service(get_user_by_id))
+            .service(web::scope("").wrap(auth).service(chat_route))
     })
     .bind(("0.0.0.0", 3335))?
     .run()
