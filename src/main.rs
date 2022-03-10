@@ -18,6 +18,7 @@ use diesel::r2d2::Pool;
 use diesel::PgConnection;
 use dotenv::dotenv;
 use session::WsChatSession;
+use whisper::controllers::search_controller::search_users;
 use whisper::controllers::user_controller::get_user_by_id;
 use whisper::db::DbExecutor;
 use whisper::extractors::http_auth_extractor::http_auth_extract;
@@ -61,7 +62,7 @@ async fn main() -> std::io::Result<()> {
         .build(gateway_manager)
         .expect("Failed to create pool.");
 
-    let own_database_url = env::var("OWN_DATABASE_URL").expect("OWN_DATABASE_URL must be set");
+    let own_database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let own_manager = ConnectionManager::<PgConnection>::new(own_database_url);
 
     let own_pool = Pool::builder()
@@ -96,6 +97,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .app_data(addr.clone())
             .app_data(server.clone())
+            .service(web::scope("/search").service(search_users))
             .service(web::scope("/user").service(get_user_by_id))
             .service(web::scope("").wrap(auth).service(chat_route))
     })
