@@ -2,7 +2,7 @@ use crate::schema::users;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Queryable, Identifiable, Serialize, Deserialize)]
+#[derive(Debug, Clone, Queryable, Identifiable, Serialize, Deserialize)]
 pub struct User {
     pub id: i32,
     pub solana_pubkey: Option<String>,
@@ -23,12 +23,26 @@ pub struct User {
 pub struct UserAPI {
     #[serde(flatten)]
     pub user: User,
+
     #[serde(flatten)]
     pub profile: ProfileAPI,
+
+    pub followers: i64,
+
+    pub following: i64,
 }
 
-#[derive(Debug, Serialize, Queryable)]
+#[derive(Debug, Clone, Serialize, Queryable)]
 pub struct ProfileAPI {
     pub status: Option<String>,
     pub description: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UserAPIWithoutCounters {
+    #[serde(flatten)]
+    pub user: User,
+
+    #[serde(flatten)]
+    pub profile: ProfileAPI,
 }
