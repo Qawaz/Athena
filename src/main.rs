@@ -98,7 +98,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(addr.clone())
             .app_data(server.clone())
             .service(web::scope("/search").service(search_users))
-            .service(web::scope("/user").service(get_user_by_id))
+            .service(web::scope("/users").service(get_user_by_id))
             .service(web::scope("").wrap(auth).service(chat_route))
     })
     .bind(("0.0.0.0", 3335))?
