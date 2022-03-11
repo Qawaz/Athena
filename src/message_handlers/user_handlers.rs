@@ -1,6 +1,6 @@
 use crate::errors::ServiceError;
 use crate::models::profile::Profile;
-use crate::models::user::{ProfileAPI, User};
+use crate::models::user::{Counters, ProfileAPI, User};
 use crate::models::user_requests::GetUserByIDReq;
 use crate::schema::profiles::dsl::*;
 use crate::schema::users::dsl::*;
@@ -57,8 +57,10 @@ impl Handler<GetUserByIDReq> for DbExecutor {
         Ok(UserAPI {
             user,
             profile,
-            following,
-            followers,
+            counters: Counters {
+                feeds: following,
+                followers,
+            },
         })
     }
 }
