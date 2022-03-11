@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Queryable, Identifiable, Serialize, Deserialize)]
 pub struct User {
+    #[serde(rename(serialize = "user_id"))]
     pub id: i32,
     pub solana_pubkey: Option<String>,
     pub ethereum_pubkey: Option<String>,
@@ -24,12 +25,9 @@ pub struct UserAPI {
     #[serde(flatten)]
     pub user: User,
 
-    #[serde(flatten)]
     pub profile: ProfileAPI,
 
-    pub followers: i64,
-
-    pub following: i64,
+    pub counters: Counters,
 }
 
 #[derive(Debug, Clone, Serialize, Queryable)]
@@ -37,12 +35,16 @@ pub struct ProfileAPI {
     pub status: Option<String>,
     pub description: Option<String>,
 }
-
+#[derive(Debug, Clone, Serialize, Queryable)]
+pub struct Counters {
+    pub feeds: i64,
+    pub followers: i64,
+}
 #[derive(Debug, Serialize)]
 pub struct UserAPIWithoutCounters {
     #[serde(flatten)]
     pub user: User,
 
-    #[serde(flatten)]
+    // #[serde(flatten)]
     pub profile: ProfileAPI,
 }
