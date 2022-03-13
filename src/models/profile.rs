@@ -14,3 +14,7 @@ pub struct Profile {
     pub updated_at: Option<NaiveDateTime>,
     pub deleted_at: Option<NaiveDateTime>,
 }
+
+pub struct GetUserProfile {
+    pub id: usize,
+}
