@@ -48,6 +48,12 @@ pub struct PrivateMessageContent {
     pub created_at: Option<String>,
 }
 
+impl PrivateMessageContent {
+    pub fn set_sender_user_id_from_jwt(&mut self, user_id: usize) {
+        self.user_id = user_id
+    }
+}
+
 /// Send message to specific room
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -172,6 +178,7 @@ impl Handler<Connect> for ChatServer {
         // notify all users in same room
         self.send_message(&"Main".to_owned(), "Someone joined", 0);
 
+        println!("Someone joined");
         // register session with random id
         self.sessions.insert(msg.id, msg.addr);
 

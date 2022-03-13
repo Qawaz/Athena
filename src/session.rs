@@ -123,7 +123,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsChatSession {
 
                 match decode_message["event"].as_str() {
                     Some("message") => {
-                        let private_message: PrivateMessage = serde_json::from_str(&text).unwrap();
+                        let mut private_message: PrivateMessage =
+                            serde_json::from_str(&text).unwrap();
+
+                        private_message.data.set_sender_user_id_from_jwt(self.id);
 
                         self.addr.do_send(private_message)
                     }
