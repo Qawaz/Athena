@@ -18,6 +18,7 @@ use diesel::r2d2::Pool;
 use diesel::PgConnection;
 use dotenv::dotenv;
 use session::WsChatSession;
+use whisper::controllers::profile_controller::get_user_profile;
 use whisper::controllers::search_controller::search_users;
 use whisper::controllers::user_controller::get_user_by_id;
 use whisper::db::DbExecutor;
@@ -98,6 +99,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(addr.clone())
             .app_data(server.clone())
             .service(web::scope("/search").service(search_users))
+            .service(web::scope("/profiles").service(get_user_profile))
             .service(web::scope("/users").service(get_user_by_id))
             .service(web::scope("").wrap(auth).service(chat_route))
     })
