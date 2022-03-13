@@ -7,6 +7,7 @@ pub struct Message {
     pub user_id: i32,
     pub to_user_id: i32,
     pub content: String,
+    pub delivered: bool,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: Option<chrono::NaiveDateTime>,
     pub deleted_at: Option<chrono::NaiveDateTime>,
