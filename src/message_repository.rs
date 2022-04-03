@@ -19,6 +19,16 @@ pub fn get_unreceived_new_messages(
         .filter(delivered.eq(false))
         .get_results(conn)
 }
+
+pub fn update_delivery_message_status(
+    message_ids: &Vec<i32>,
+    conn: &PgConnection,
+) -> QueryResult<usize> {
+    diesel::update(messages.filter(id.eq_any(message_ids)))
+        .set(delivered.eq(true))
+        .execute(conn)
+}
+
 pub fn get_messages(connection: &PgConnection) -> QueryResult<Vec<Message>> {
     messages.limit(5).load::<Message>(&*connection)
 }
