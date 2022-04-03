@@ -159,6 +159,12 @@ impl ChatServer {
             }
         }
     }
+    /// Send verified delivery report
+    fn send_verified_delivery_report(&self, delivery_report: DeliveryReport) {
+        if let Some(addr) = self.sessions.get(&delivery_report.data.sender) {
+            let _ = addr.do_send(Message(serde_json::to_string(&delivery_report).unwrap()));
+        }
+    }
 }
 
 /// Make actor from `ChatServer`
