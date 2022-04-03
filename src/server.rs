@@ -292,3 +292,17 @@ impl Handler<Join> for ChatServer {
         self.send_message(&name, "Someone connected", id);
     }
 }
+
+/// Handler for private message.
+impl Handler<DeliveryReport> for ChatServer {
+    type Result = ();
+
+    fn handle(&mut self, msg: DeliveryReport, _: &mut Context<Self>) {
+        let query_result =
+            update_delivery_message_status(&msg.data.ids, &self.own_pool.get().unwrap()).unwrap();
+
+        if query_result == 1 {
+            self.send_verified_delivery_report(msg);
+        };
+    }
+}
