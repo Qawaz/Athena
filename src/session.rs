@@ -6,6 +6,7 @@ use actix::{
 };
 use actix_web_actors::ws;
 use serde_json::Value;
+use whisper::models::delivery_report::DeliveryReport;
 
 use crate::server::{ChatServer, Connect, Disconnect, Message, PrivateMessage};
 /// How often heartbeat pings are sent
@@ -129,6 +130,16 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsChatSession {
                         private_message.data.set_sender_user_id_from_jwt(self.id);
 
                         self.addr.do_send(private_message)
+                    }
+                    Some("delivery-report") => {
+                        let mut delivery_report: DeliveryReport =
+                            serde_json::from_str(&text).unwrap();
+
+                        delivery_report.data.set_sender_id_from_jwt(self.id);
+
+                        println!("the fucking incoming delivery-report happend {:?}", self.id);
+
+                        self.addr.do_send(delivery_report)
                     }
                     _ => println!("Unknown Action"),
                 }
