@@ -194,6 +194,8 @@ impl Handler<Connect> for ChatServer {
             .or_insert_with(HashSet::new)
             .insert(msg.id);
 
+        self.send_new_unreceived_messages(msg.id);
+
         // send id back
         msg.id
     }
