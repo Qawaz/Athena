@@ -10,6 +10,15 @@ pub fn create_message(message: CreateMessage, conn: &PgConnection) -> QueryResul
         .get_result(conn)
 }
 
+pub fn get_unreceived_new_messages(
+    target_user_id: i32,
+    conn: &PgConnection,
+) -> QueryResult<Vec<Message>> {
+    messages
+        .filter(to_user_id.eq(target_user_id))
+        .filter(delivered.eq(false))
+        .get_results(conn)
+}
 pub fn get_messages(connection: &PgConnection) -> QueryResult<Vec<Message>> {
     messages.limit(5).load::<Message>(&*connection)
 }
