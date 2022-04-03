@@ -6,8 +6,14 @@ use diesel::{
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use whisper::{
-    message_repository::create_message,
-    models::{self, message::CreateMessage},
+    message_repository::{
+        create_message, get_unreceived_new_messages, update_delivery_message_status,
+    },
+    models::{
+        self,
+        delivery_report::DeliveryReport,
+        message::{CreateMessage, NewMessagesArray, NewMessagesArrayContent},
+    },
 };
 
 /// Chat server sends this messages to session
@@ -49,7 +55,7 @@ pub struct PrivateMessageContent {
 }
 
 impl PrivateMessageContent {
-    pub fn set_sender_user_id_from_jwt(&mut self, user_id: usize) {
+    pub fn set_sender_id_from_jwt(&mut self, user_id: usize) {
         self.user_id = user_id
     }
 }
@@ -147,7 +153,8 @@ impl ChatServer {
             let _ = addr.do_send(Message(serde_json::to_string(&assigned_message).unwrap()));
         }
     }
-    /// Send message to all users in the room
+
+    /// Send message to target user
     fn send_message(&self, room: &str, message: &str, skip_id: usize) {
         if let Some(sessions) = self.rooms.get(room) {
             for id in sessions {
@@ -159,6 +166,7 @@ impl ChatServer {
             }
         }
     }
+
     /// Send verified delivery report
     fn send_verified_delivery_report(&self, delivery_report: DeliveryReport) {
         if let Some(addr) = self.sessions.get(&delivery_report.data.sender) {
