@@ -165,6 +165,31 @@ impl ChatServer {
             let _ = addr.do_send(Message(serde_json::to_string(&delivery_report).unwrap()));
         }
     }
+
+    /// Send verified delivery report
+    fn send_new_unreceived_messages(&self, user_id: usize) {
+        if let Some(addr) = self.sessions.get(&user_id) {
+            let get_new_messages = get_unreceived_new_messages(
+                user_id.try_into().unwrap(),
+                &self.own_pool.get().unwrap(),
+            );
+
+            let new_messages_counts = get_new_messages.as_ref().unwrap().iter().count();
+            println!("get fucking new messages {:?} :", get_new_messages);
+
+            if new_messages_counts > 0 {
+                addr.do_send(Message(
+                    serde_json::to_string(&NewMessagesArray {
+                        data: NewMessagesArrayContent {
+                            messages: get_new_messages.unwrap(),
+                        },
+                        ..Default::default()
+                    })
+                    .unwrap(),
+                ));
+            }
+        }
+    }
 }
 
 /// Make actor from `ChatServer`
