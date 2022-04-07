@@ -1,7 +1,7 @@
 use crate::errors::ServiceError;
 use crate::models::profile::Profile;
 use crate::models::user::{Counters, ProfileAPI, User};
-use crate::models::user_requests::GetUserByIDReq;
+use crate::models::user_requests::{GetMultipleUsers, GetUserByIDReq};
 use crate::schema::profiles::dsl::*;
 use crate::schema::users::dsl::*;
 use crate::{db::DbExecutor, models::user::UserAPI};
@@ -62,5 +62,26 @@ impl Handler<GetUserByIDReq> for DbExecutor {
                 followers,
             },
         })
+    }
+}
+
+impl Message for GetMultipleUsers {
+    type Result = Result<Vec<User>, ServiceError>;
+}
+
+impl Handler<GetMultipleUsers> for DbExecutor {
+    type Result = Result<Vec<User>, ServiceError>;
+
+    fn handle(&mut self, request: GetMultipleUsers, _: &mut SyncContext<Self>) -> Self::Result {
+        let gateway_conn: &PgConnection = &self.1.get().unwrap();
+
+        use crate::schema::users::dsl::*;
+
+        let selected_users = users
+            .filter(id.eq_any(request.ids))
+            .order_by(created_at.asc())
+            .get_results::<User>(gateway_conn)?;
+
+        Ok(selected_users)
     }
 }
