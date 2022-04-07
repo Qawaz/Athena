@@ -20,7 +20,7 @@ use dotenv::dotenv;
 use session::WsChatSession;
 use whisper::controllers::profile_controller::get_user_profile;
 use whisper::controllers::search_controller::search_users;
-use whisper::controllers::user_controller::get_user_by_id;
+use whisper::controllers::user_controller::{get_multiple_users, get_user_by_id};
 use whisper::db::DbExecutor;
 use whisper::extractors::http_auth_extractor::http_auth_extract;
 use whisper::extractors::jwt_data_decode::Auth;
@@ -100,10 +100,14 @@ async fn main() -> std::io::Result<()> {
             .app_data(server.clone())
             .service(web::scope("/search").service(search_users))
             .service(web::scope("/profiles").service(get_user_profile))
-            .service(web::scope("/users").service(get_user_by_id))
+            .service(
+                web::scope("/users")
+                    .service(get_user_by_id)
+                    .service(get_multiple_users),
+            )
             .service(web::scope("").wrap(auth).service(chat_route))
     })
-    .bind(("0.0.0.0", 3335))?
+    .bind(("localhost", 3335))?
     .run()
     .await
 }
