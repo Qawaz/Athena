@@ -1,6 +1,6 @@
 use crate::errors::ServiceError;
 use crate::models::profile::Profile;
-use crate::models::user::{Counters, ProfileAPI, User};
+use crate::models::user::{Counters, ProfileAPI, User, UserAPIWithoutCounters};
 use crate::models::user_requests::{GetMultipleUsers, GetUserByIDReq};
 use crate::schema::profiles::dsl::*;
 use crate::schema::users::dsl::*;
@@ -66,13 +66,14 @@ impl Handler<GetUserByIDReq> for DbExecutor {
 }
 
 impl Message for GetMultipleUsers {
-    type Result = Result<Vec<User>, ServiceError>;
+    type Result = Result<Vec<UserAPIWithoutCounters>, ServiceError>;
 }
 
 impl Handler<GetMultipleUsers> for DbExecutor {
-    type Result = Result<Vec<User>, ServiceError>;
+    type Result = Result<Vec<UserAPIWithoutCounters>, ServiceError>;
 
     fn handle(&mut self, request: GetMultipleUsers, _: &mut SyncContext<Self>) -> Self::Result {
+        let own_conn: &PgConnection = &self.0.get().unwrap();
         let gateway_conn: &PgConnection = &self.1.get().unwrap();
 
         use crate::schema::users::dsl::*;
@@ -82,6 +83,40 @@ impl Handler<GetMultipleUsers> for DbExecutor {
             .order_by(created_at.asc())
             .get_results::<User>(gateway_conn)?;
 
-        Ok(selected_users)
+        let users_profiles = Profile::belonging_to(&selected_users)
+            .load::<Profile>(own_conn)?
+            .grouped_by(&selected_users);
+
+        let data = selected_users
+            .into_iter()
+            .zip(users_profiles)
+            .collect::<Vec<_>>();
+
+        let users_with_profile: Vec<UserAPIWithoutCounters> = data
+            .into_iter()
+            .map(|(user, profile)| {
+                let user_status = if !profile.is_empty() {
+                    profile[0].status.to_owned()
+                } else {
+                    Some("".to_string())
+                };
+
+                let user_description = if !profile.is_empty() {
+                    profile[0].description.to_owned()
+                } else {
+                    Some("".to_string())
+                };
+
+                UserAPIWithoutCounters {
+                    user,
+                    profile: ProfileAPI {
+                        status: user_status,
+                        description: user_description,
+                    },
+                }
+            })
+            .collect();
+
+        Ok(users_with_profile)
     }
 }
