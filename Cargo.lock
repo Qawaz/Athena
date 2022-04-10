@@ -2189,6 +2189,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_qs"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9dfafda9a9479d9ac6188b6fc1f84b850cd3f3b5faff6d13e6e45d1296e92ee8"
+dependencies = [
+ "actix-web 4.0.1",
+ "futures",
+ "percent-encoding",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "serde_urlencoded"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2880,6 +2893,7 @@ dependencies = [
  "openssl-probe",
  "serde",
  "serde_json",
+ "serde_qs",
  "serde_with",
 ]
 
