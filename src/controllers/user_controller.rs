@@ -1,6 +1,6 @@
 use actix::Addr;
 use actix_web::{
-    get,
+    get, post,
     web::{Data, Json, Path},
     HttpResponse, Responder, ResponseError,
 };
@@ -22,10 +22,12 @@ async fn get_user_by_id((id, addr): (Path<i32>, Data<Addr<DbExecutor>>)) -> impl
     }
 }
 
-#[get("/multiple")]
+#[post("/multiple")]
 async fn get_multiple_users(
     (users_ids, addr): (Json<GetMultipleUsers>, Data<Addr<DbExecutor>>),
 ) -> impl Responder {
+    println!("Executing multiple users");
+
     let actix_message = addr.send(users_ids.into_inner()).await;
     let result = actix_message.unwrap();
 
