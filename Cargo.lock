@@ -3341,6 +3341,7 @@ dependencies = [
  "idna",
  "matches",
  "percent-encoding",
+ "serde",
 ]
 
 [[package]]
@@ -3537,6 +3538,7 @@ dependencies = [
  "serde_qs",
  "serde_with",
  "tokio 1.17.0",
+ "url",
  "uuid",
 ]
 
