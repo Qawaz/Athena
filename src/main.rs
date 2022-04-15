@@ -20,7 +20,7 @@ use dotenv::dotenv;
 use session::WsChatSession;
 use whisper::controllers::profile_controller::get_user_profile;
 use whisper::controllers::search_controller::search_users;
-use whisper::controllers::user_controller::{get_multiple_users, get_user_by_id};
+use whisper::controllers::user_controller::{get_multiple_users, get_user_by_id, set_avatar};
 use whisper::db::DbExecutor;
 use whisper::extractors::http_auth_extractor::http_auth_extract;
 use whisper::extractors::jwt_data_decode::Auth;
@@ -54,6 +54,8 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     dotenv().ok();
+
+    std::fs::create_dir_all("./tmp")?;
 
     let gateway_database_url =
         env::var("GATEWAY_DATABASE_URL").expect("GATEWAY_DATABASE_URL must be set");
@@ -103,9 +105,14 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/users")
                     .service(get_user_by_id)
-                    .service(get_multiple_users),
+                    .service(get_multiple_users), // .service(set_avatar),
             )
-            .service(web::scope("").wrap(auth).service(chat_route))
+            .service(
+                web::scope("")
+                    .wrap(auth)
+                    .service(chat_route)
+                    .service(set_avatar), // .service(set_avatar),
+            )
     })
     .bind(("localhost", 3335))?
     .run()
