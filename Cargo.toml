@@ -31,3 +31,4 @@ serde_qs = { version = "0.9", features = ["actix4"]}
 openssl = "*"
 openssl-probe = "0.1.2"
 derive_more = "0.99.17"
+sanitize-filename = "0.3"
