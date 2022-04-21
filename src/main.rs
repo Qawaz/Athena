@@ -79,7 +79,7 @@ async fn main() -> std::io::Result<()> {
         DbExecutor(own_pool_clone.clone(), gateway_pool.clone())
     }));
 
-    // // Start chat server actor
+    // Start chat server actor
     let server = Data::new(server::ChatServer::new(own_pool.clone()).start());
 
     // Create Http server with websocket support
@@ -105,13 +105,13 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/users")
                     .service(get_user_by_id)
-                    .service(get_multiple_users), // .service(set_avatar),
+                    .service(get_multiple_users),
             )
             .service(
                 web::scope("")
                     .wrap(auth)
                     .service(chat_route)
-                    .service(set_avatar), // .service(set_avatar),
+                    .service(set_avatar),
             )
     })
     .bind(("localhost", 3335))?
