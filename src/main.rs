@@ -85,14 +85,12 @@ async fn main() -> std::io::Result<()> {
     let server = Data::new(server::ChatServer::new(own_pool.clone()).start());
 
     // AWS S3
+    let s3_endpoint = env::var("AWS_ENDPOINT").expect("no endpoint defined for s3");
+
     let region_provider = RegionProviderChain::default_provider().or_else("default");
     let config = aws_config::from_env()
         .region(region_provider)
-        .endpoint_resolver(Endpoint::immutable(
-            "https://s3.ir-thr-at1.arvanstorage.com"
-                .parse()
-                .expect("valid URI"),
-        ))
+        .endpoint_resolver(Endpoint::immutable(s3_endpoint.parse().expect("valid URI")))
         .load()
         .await;
 
