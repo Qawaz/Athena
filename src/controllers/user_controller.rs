@@ -93,7 +93,14 @@ async fn set_avatar(
 
         let bucket = "messenger";
 
-        let _upload = create_object(&s3_client, bucket, bst, &file_key).await;
+        let _upload = create_object(
+            &s3_client,
+            bucket,
+            bst,
+            &file_key,
+            &res.subtype().to_string(),
+        )
+        .await;
 
         image_response_uri = get_object(&s3_client, bucket, &file_key, 150)
             .await?
