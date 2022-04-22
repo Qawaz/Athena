@@ -1,12 +1,11 @@
-use std::io::Write;
-
 use actix::Addr;
 use actix_multipart::Multipart;
 use actix_web::{
     get, post,
-    web::{self, Data, Json, Path},
+    web::{Data, Json, Path},
     Error, HttpResponse, Responder, ResponseError,
 };
+use aws_sdk_s3::{types::ByteStream, Client};
 use futures::TryStreamExt;
 use uuid::Uuid;
 
@@ -14,6 +13,7 @@ use crate::{
     db::DbExecutor,
     errors::ServiceError,
     extractors::jwt_data_decode::Auth,
+    libs::aws::{create_object, get_object},
     models::user_requests::{GetMultipleUsers, GetUserByIDReq},
 };
 
@@ -45,8 +45,10 @@ async fn get_multiple_users(
 
 #[post("/user/set-avatar")]
 async fn set_avatar(
-    (mut form_data, addr, sub): (Multipart, Data<Addr<DbExecutor>>, Auth),
+    (mut form_data, _addr, sub, s3_client): (Multipart, Data<Addr<DbExecutor>>, Auth, Data<Client>),
 ) -> Result<HttpResponse, Error> {
+    let mut image_response_uri = String::new();
+
     while let Some(mut field) = form_data.try_next().await? {
         // A multipart/form-data stream has to contain `content_disposition`
         let content_disposition = field.content_disposition();
@@ -66,29 +68,38 @@ async fn set_avatar(
             None => mime::TEXT_PLAIN,
         };
 
-        println!("file extension is: {:?}", res.subtype());
-
-        println!("{:?}", filename);
-        let filepath = format!(
-            "./tmp/{}",
-            format!("{}.{}", sub.user_id.to_string(), res.subtype().to_owned())
+        println!(
+            "filename is:{:?} and the extenstion filename is: {:?}",
+            filename,
+            res.subtype()
         );
 
-        // File::create is blocking operation, use threadpool
-        let mut f = web::block(|| std::fs::File::create(filepath)).await??;
+        let mut data = Vec::new();
 
         // Field in turn is stream of *Bytes* object
         while let Some(chunk) = field.try_next().await? {
-            // filesystem operations are blocking, we have to use threadpool
-            f = web::block(move || f.write_all(&chunk).map(|_| f)).await??;
+            data.extend_from_slice(chunk.as_ref())
         }
-        // let actix_message = addr.send(GetUserByIDReq { id: *id }).await;
-        // let result = actix_message.unwrap();
-    }
-    Ok(HttpResponse::Ok().into())
 
-    // match result {
-    //     Ok(response) => HttpResponse::Ok().json(response),
-    //     Err(error) => ServiceError::error_response(&error),
-    // }
+        let bst = ByteStream::from(data);
+
+        let file_key = format!(
+            "{}{}{}.{}",
+            "user-",
+            sub.user_id.to_string(),
+            "-avatar",
+            res.subtype()
+        );
+
+        let bucket = "messenger";
+
+        let _upload = create_object(&s3_client, bucket, bst, &file_key).await;
+
+        image_response_uri = get_object(&s3_client, bucket, &file_key, 150)
+            .await?
+            .uri()
+            .to_string();
+    }
+
+    Ok(HttpResponse::Ok().body(image_response_uri).into())
 }
