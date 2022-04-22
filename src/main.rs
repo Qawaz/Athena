@@ -13,6 +13,8 @@ use actix_web::web::Data;
 use actix_web::{get, http, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use actix_web_httpauth::middleware::HttpAuthentication;
+use aws_config::meta::region::RegionProviderChain;
+use aws_sdk_s3::{Client, Endpoint};
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel::PgConnection;
@@ -82,6 +84,20 @@ async fn main() -> std::io::Result<()> {
     // Start chat server actor
     let server = Data::new(server::ChatServer::new(own_pool.clone()).start());
 
+    // AWS S3
+    let region_provider = RegionProviderChain::default_provider().or_else("default");
+    let config = aws_config::from_env()
+        .region(region_provider)
+        .endpoint_resolver(Endpoint::immutable(
+            "https://s3.ir-thr-at1.arvanstorage.com"
+                .parse()
+                .expect("valid URI"),
+        ))
+        .load()
+        .await;
+
+    let s3_client = Data::new(Client::new(&config));
+
     // Create Http server with websocket support
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -100,6 +116,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .app_data(addr.clone())
             .app_data(server.clone())
+            .app_data(s3_client.clone())
             .service(web::scope("/search").service(search_users))
             .service(web::scope("/profiles").service(get_user_profile))
             .service(
