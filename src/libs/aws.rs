@@ -12,12 +12,15 @@ pub async fn create_object(
     bucket: &str,
     body: ByteStream,
     key: &str,
+    content_type: &str,
 ) -> Result<PutObjectOutput, Box<dyn Error>> {
     let create_request = client
         .put_object()
         .bucket(bucket)
         .body(body)
         .key(key)
+        .acl(aws_sdk_s3::model::ObjectCannedAcl::PublicRead)
+        .content_type(content_type)
         .send()
         .await?;
 
