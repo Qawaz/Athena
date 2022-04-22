@@ -6,6 +6,7 @@ pub mod controllers;
 pub mod db;
 pub mod errors;
 pub mod extractors;
+pub mod libs;
 pub mod message_handlers;
 pub mod message_repository;
 pub mod models;
