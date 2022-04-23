@@ -1,6 +1,6 @@
 use crate::errors::ServiceError;
 use crate::models::profile::Profile;
-use crate::models::user::{Counters, ProfileAPI, User, UserAPIWithoutCounters};
+use crate::models::user::{Counters, ProfileAPI, SetAvatarRequest, User, UserAPIWithoutCounters};
 use crate::models::user_requests::{GetMultipleUsers, GetUserByIDReq};
 use crate::schema::profiles::dsl::*;
 use crate::schema::users::dsl::*;
@@ -118,5 +118,28 @@ impl Handler<GetMultipleUsers> for DbExecutor {
             .collect();
 
         Ok(users_with_profile)
+    }
+}
+
+impl Message for SetAvatarRequest {
+    type Result = Result<(), ServiceError>;
+}
+
+impl Handler<SetAvatarRequest> for DbExecutor {
+    type Result = Result<(), ServiceError>;
+
+    fn handle(&mut self, request: SetAvatarRequest, _: &mut SyncContext<Self>) -> Self::Result {
+        let gateway_conn: &PgConnection = &self.1.get().unwrap();
+
+        let update_avatar = diesel::update(users.find(request.user_id))
+            .set(avatar.eq(request.avatar))
+            .execute(gateway_conn);
+
+        match update_avatar {
+            Ok(response) => println!("Avatar updated: {:?}", response),
+            Err(error) => println!("Could not update avatar: {:?}", error),
+        }
+
+        Ok(())
     }
 }

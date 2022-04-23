@@ -15,7 +15,7 @@ use crate::{
     extractors::jwt_data_decode::Auth,
     libs::aws::{create_object, get_object},
     models::{
-        user::SetAvatarResponse,
+        user::{SetAvatarRequest, SetAvatarResponse},
         user_requests::{GetMultipleUsers, GetUserByIDReq},
     },
 };
@@ -48,7 +48,7 @@ async fn get_multiple_users(
 
 #[post("/user/set-avatar")]
 async fn set_avatar(
-    (mut form_data, _addr, sub, s3_client): (Multipart, Data<Addr<DbExecutor>>, Auth, Data<Client>),
+    (mut form_data, addr, sub, s3_client): (Multipart, Data<Addr<DbExecutor>>, Auth, Data<Client>),
 ) -> Result<HttpResponse, Error> {
     let mut image_response_uri = String::new();
 
@@ -109,6 +109,13 @@ async fn set_avatar(
             .await?
             .uri()
             .to_string();
+
+        let _db_update_avatar = addr
+            .send(SetAvatarRequest {
+                user_id: sub.user_id,
+                avatar: image_response_uri.clone(),
+            })
+            .await;
     }
 
     Ok(HttpResponse::Ok()
