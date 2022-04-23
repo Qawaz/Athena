@@ -48,3 +48,8 @@ pub struct UserAPIWithoutCounters {
     // #[serde(flatten)]
     pub profile: ProfileAPI,
 }
+
+#[derive(Debug, Serialize)]
+pub struct SetAvatarResponse {
+    pub avatar: String,
+}
