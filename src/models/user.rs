@@ -49,6 +49,11 @@ pub struct UserAPIWithoutCounters {
     pub profile: ProfileAPI,
 }
 
+pub struct SetAvatarRequest {
+    pub user_id: i32,
+    pub avatar: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct SetAvatarResponse {
     pub avatar: String,
