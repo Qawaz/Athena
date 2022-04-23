@@ -14,7 +14,10 @@ use crate::{
     errors::ServiceError,
     extractors::jwt_data_decode::Auth,
     libs::aws::{create_object, get_object},
-    models::user_requests::{GetMultipleUsers, GetUserByIDReq},
+    models::{
+        user::SetAvatarResponse,
+        user_requests::{GetMultipleUsers, GetUserByIDReq},
+    },
 };
 
 #[get("/id/{id}")]
@@ -108,5 +111,9 @@ async fn set_avatar(
             .to_string();
     }
 
-    Ok(HttpResponse::Ok().body(image_response_uri).into())
+    Ok(HttpResponse::Ok()
+        .json(SetAvatarResponse {
+            avatar: image_response_uri,
+        })
+        .into())
 }
