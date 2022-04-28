@@ -6,13 +6,13 @@ use diesel::{
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use whisper::{
-    message_repository::{
-        create_message, get_unreceived_new_messages, update_delivery_message_status,
-    },
     models::{
         self,
         delivery_report::DeliveryReport,
         message::{CreateMessage, NewMessagesArray, NewMessagesArrayContent},
+    },
+    repositories::message_repository::{
+        create_message, get_unreceived_new_messages, update_delivery_message_status,
     },
 };
 
@@ -226,6 +226,8 @@ impl Handler<Connect> for ChatServer {
             .entry("Main".to_owned())
             .or_insert_with(HashSet::new)
             .insert(msg.id);
+
+        print!("querying this user id {:?}", msg.id);
 
         self.send_new_unreceived_messages(msg.id);
 
