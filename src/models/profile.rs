@@ -18,3 +18,15 @@ pub struct Profile {
 pub struct GetUserProfile {
     pub id: usize,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct SetStatusRequest {
+    pub sender: i32,
+    pub status: String,
+}
+
+impl SetStatusRequest {
+    pub fn set_sender_id_from_jwt(&mut self, sender_id: i32) {
+        self.sender = sender_id
+    }
+}
