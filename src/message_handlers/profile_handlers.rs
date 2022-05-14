@@ -28,11 +28,11 @@ impl Handler<GetUserProfile> for DbExecutor {
 }
 
 impl Message for SetStatusRequest {
-    type Result = Result<usize, ServiceError>;
+    type Result = Result<String, ServiceError>;
 }
 
 impl Handler<SetStatusRequest> for DbExecutor {
-    type Result = Result<usize, ServiceError>;
+    type Result = Result<String, ServiceError>;
 
     fn handle(
         &mut self,
@@ -45,6 +45,10 @@ impl Handler<SetStatusRequest> for DbExecutor {
             .set(status.eq(set_status_request.status))
             .execute(own_conn)?;
 
-        Ok(update_status)
+        if update_status == 0 {
+            return Err(ServiceError::Forbidden);
+        }
+
+        Ok("Status updated successfully".to_string())
     }
 }
