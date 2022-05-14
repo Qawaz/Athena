@@ -33,7 +33,7 @@ async fn set_status(
     let result = actix_message.unwrap();
 
     match result {
-        Ok(response) => HttpResponse::Ok().json(response),
+        Ok(response) => HttpResponse::Ok().body(response),
         Err(error) => ServiceError::error_response(&error),
     }
 }
