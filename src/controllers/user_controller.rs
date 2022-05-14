@@ -7,6 +7,7 @@ use actix_web::{
 };
 use aws_sdk_s3::{types::ByteStream, Client};
 use futures::TryStreamExt;
+use url::Url;
 use uuid::Uuid;
 
 use crate::{
@@ -110,12 +111,16 @@ async fn set_avatar(
             .uri()
             .to_string();
 
-        let _db_update_avatar = addr
-            .send(SetAvatarRequest {
-                user_id: sub.user_id,
-                avatar: image_response_uri.clone(),
-            })
-            .await;
+        let object_url = Url::parse(image_response_uri.as_ref()).unwrap();
+
+        if let Some(domain) = object_url.domain() {
+            let _db_update_avatar = addr
+                .send(SetAvatarRequest {
+                    user_id: sub.user_id,
+                    avatar: format!("{}://{}{}", object_url.scheme(), domain, object_url.path()),
+                })
+                .await;
+        }
     }
 
     Ok(HttpResponse::Ok()
