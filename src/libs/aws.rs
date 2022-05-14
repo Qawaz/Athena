@@ -24,8 +24,6 @@ pub async fn create_object(
         .send()
         .await?;
 
-    println!("Create Request: {:?}", create_request);
-
     Ok(create_request)
 }
 
@@ -42,8 +40,6 @@ pub async fn get_object(
         .key(object)
         .presigned(PresigningConfig::expires_in(expires_in)?)
         .await?;
-
-    println!("Object URI: {}", presigned_request.uri());
 
     Ok(presigned_request)
 }
