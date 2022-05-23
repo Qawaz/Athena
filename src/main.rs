@@ -10,7 +10,7 @@ use std::time::Instant;
 use actix::*;
 use actix_cors::Cors;
 use actix_web::web::Data;
-use actix_web::{get, http, web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{get, http, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
 use actix_web_httpauth::middleware::HttpAuthentication;
 use aws_config::meta::region::RegionProviderChain;
@@ -30,6 +30,11 @@ mod server;
 mod session;
 
 embed_migrations!("./migrations");
+
+#[get("/")]
+async fn hello() -> impl Responder {
+    HttpResponse::Ok().body("Secret Keeper greats you")
+}
 
 /// Entry point for our websocket route
 #[get("/ws/")]
@@ -56,8 +61,6 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     dotenv().ok();
-
-    std::fs::create_dir_all("./tmp")?;
 
     let gateway_database_url =
         env::var("GATEWAY_DATABASE_URL").expect("GATEWAY_DATABASE_URL must be set");
@@ -115,6 +118,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(addr.clone())
             .app_data(server.clone())
             .app_data(s3_client.clone())
+            .service(hello)
             .service(web::scope("/search").service(search_users))
             .service(web::scope("/profiles").service(get_user_profile))
             .service(web::scope("/profile").service(set_status))
