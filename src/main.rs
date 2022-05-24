@@ -62,26 +62,18 @@ async fn main() -> std::io::Result<()> {
 
     dotenv().ok();
 
-    let gateway_database_url =
-        env::var("GATEWAY_DATABASE_URL").expect("GATEWAY_DATABASE_URL must be set");
-    let gateway_manager = ConnectionManager::<PgConnection>::new(gateway_database_url);
-
-    let gateway_pool = Pool::builder()
-        .build(gateway_manager)
-        .expect("Failed to create pool.");
-
-    let own_database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let own_manager = ConnectionManager::<PgConnection>::new(own_database_url);
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let connection_manager = ConnectionManager::<PgConnection>::new(database_url);
 
     let own_pool = Pool::builder()
-        .build(own_manager)
+        .build(connection_manager)
         .expect("Failed to create pool.");
 
     embedded_migrations::run(&own_pool.get().expect("cant get connection pool")).unwrap();
 
     let own_pool_clone = own_pool.clone();
     let addr = Data::new(SyncArbiter::start(12, move || {
-        DbExecutor(own_pool_clone.clone(), gateway_pool.clone())
+        DbExecutor(own_pool_clone.clone())
     }));
 
     // Start chat server actor
