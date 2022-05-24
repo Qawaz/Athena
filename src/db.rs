@@ -9,8 +9,7 @@ use diesel::{
 };
 
 pub struct DbExecutor(
-    pub Pool<ConnectionManager<PgConnection>>,
-    pub Pool<ConnectionManager<PgConnection>>,
+    pub Pool<ConnectionManager<PgConnection>>
 );
 
 impl Actor for DbExecutor {
