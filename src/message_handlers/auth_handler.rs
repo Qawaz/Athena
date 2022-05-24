@@ -14,7 +14,7 @@ use crate::{
     errors::ServiceError,
     models::{
         auth::{LoginRequest, LoginResponse},
-        user::{User, UserResponse},
+        user::{User, CreateUserResponse},
     },
     schema::users::username,
 };
@@ -59,7 +59,7 @@ impl Handler<LoginRequest> for DbExecutor {
                     expires: NaiveDateTime::from_timestamp(expires, 0)
                         .format("%Y-%m-%d %H:%M:%S.%f")
                         .to_string(),
-                    user: UserResponse {
+                    user: CreateUserResponse {
                         user_id: user.id,
                         username: user.username.as_deref().unwrap_or("").to_string(),
                         email: user.email.as_deref().unwrap_or("").to_string(),
