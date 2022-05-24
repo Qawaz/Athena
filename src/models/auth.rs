@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use super::user::UserResponse;
+use super::user::CreateUserResponse;
 
 #[derive(Debug, Deserialize)]
 pub struct LoginRequest {
@@ -12,5 +12,5 @@ pub struct LoginResponse {
     pub access_token: String,
     pub refresh_token: String,
     pub expires: String,
-    pub user: UserResponse,
+    pub user: CreateUserResponse,
 }
