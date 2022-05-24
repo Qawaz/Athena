@@ -2,6 +2,7 @@ use crate::models::user::User;
 use crate::schema::profiles;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 #[derive(Debug, Clone, Queryable, Identifiable, Serialize, Associations, Deserialize)]
 #[belongs_to(User)]
@@ -15,6 +16,13 @@ pub struct Profile {
     pub deleted_at: Option<NaiveDateTime>,
 }
 
+#[derive(Debug, Validate, Insertable, Serialize, Deserialize)]
+#[table_name = "profiles"]
+pub struct CreateProfile {
+    pub user_id: i32,
+    pub status: String,
+    pub description: String,
+}
 pub struct GetUserProfile {
     pub id: usize,
 }
