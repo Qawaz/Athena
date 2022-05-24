@@ -18,17 +18,16 @@ impl Handler<SearchUsersQueryStrings> for DbExecutor {
         query_strings: SearchUsersQueryStrings,
         _: &mut SyncContext<Self>,
     ) -> Self::Result {
-        let gateway_conn: &PgConnection = &self.1.get().unwrap();
-        let own_conn: &PgConnection = &self.0.get().unwrap();
+        let conn: &PgConnection = &self.0.get().unwrap();
 
         let pattern = format!("%{}%", query_strings.username);
 
         let found_users = users
             .filter(username.like(pattern))
-            .load::<User>(gateway_conn)?;
+            .load::<User>(conn)?;
 
         let profile = Profile::belonging_to(&found_users)
-            .load::<Profile>(own_conn)?
+            .load::<Profile>(conn)?
             .grouped_by(&found_users);
 
         let data: Vec<(User, Vec<Profile>)> =
