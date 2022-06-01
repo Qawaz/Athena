@@ -4,5 +4,6 @@ pub mod message;
 pub mod profile;
 pub mod user;
 pub mod token;
+pub mod settings;
 
 pub mod user_requests;
