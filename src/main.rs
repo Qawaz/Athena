@@ -20,6 +20,7 @@ use diesel::r2d2::Pool;
 use diesel::PgConnection;
 use dotenv::dotenv;
 use session::WsChatSession;
+use whisper::controllers::auth_controller::{register, login, revoke_token};
 use whisper::controllers::profile_controller::{get_user_profile, set_status};
 use whisper::controllers::search_controller::search_users;
 use whisper::controllers::user_controller::{get_multiple_users, get_user_by_id, set_avatar};
@@ -111,6 +112,10 @@ async fn main() -> std::io::Result<()> {
             .app_data(server.clone())
             .app_data(s3_client.clone())
             .service(hello)
+            .service(web::scope("/auth")
+                    .service(register)
+                    .service(login)
+                    .service(revoke_token))
             .service(web::scope("/search").service(search_users))
             .service(web::scope("/profiles").service(get_user_profile))
             .service(web::scope("/profile").service(set_status))
