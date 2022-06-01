@@ -21,8 +21,8 @@ table! {
 table! {
     messages (id) {
         id -> Int4,
-        user_id -> Int4,
-        to_user_id -> Int4,
+        sender -> Int4,
+        receiver -> Int4,
         content -> Varchar,
         delivered -> Bool,
         created_at -> Timestamp,
