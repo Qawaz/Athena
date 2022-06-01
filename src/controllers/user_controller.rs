@@ -17,9 +17,43 @@ use crate::{
     libs::aws::{create_object, get_object},
     models::{
         user::{SetAvatarRequest, SetAvatarResponse},
-        user_requests::{GetMultipleUsers, GetUserByIDReq},
+        user_requests::{GetMultipleUsers, GetUserByIDReq}, settings::{ChangePasswordRequest, ChangeUsernameRequest},
     },
 };
+
+#[post("/change-password")]
+async fn change_password(
+    (mut password_request, sub, addr): (Json<ChangePasswordRequest>, Auth, Data<Addr<DbExecutor>>),
+) -> impl Responder {
+    password_request.uid = Some(sub.user_id);
+
+    let actix_message = addr.send(password_request.into_inner()).await;
+    let result = actix_message.unwrap();
+
+    match result {
+        Ok(response) => HttpResponse::Ok().body(response),
+        Err(error) => ResponseError::error_response(&error),
+    }
+}
+
+#[post("/change-username")]
+async fn change_username(
+    (mut change_username_request, sub, addr): (
+        Json<ChangeUsernameRequest>,
+        Auth,
+        Data<Addr<DbExecutor>>,
+    ),
+) -> impl Responder {
+    change_username_request.uid = Some(sub.user_id);
+
+    let actix_message = addr.send(change_username_request.into_inner()).await;
+    let result = actix_message.unwrap();
+
+    match result {
+        Ok(response) => HttpResponse::Ok().body(response),
+        Err(error) => ResponseError::error_response(&error),
+    }
+}
 
 #[get("/id/{id}")]
 async fn get_user_by_id((id, addr): (Path<i32>, Data<Addr<DbExecutor>>)) -> impl Responder {
@@ -36,7 +70,6 @@ async fn get_user_by_id((id, addr): (Path<i32>, Data<Addr<DbExecutor>>)) -> impl
 async fn get_multiple_users(
     (users_ids, addr): (Json<GetMultipleUsers>, Data<Addr<DbExecutor>>),
 ) -> impl Responder {
-    println!("Executing multiple users");
 
     let actix_message = addr.send(users_ids.into_inner()).await;
     let result = actix_message.unwrap();
