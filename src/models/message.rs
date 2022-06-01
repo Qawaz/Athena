@@ -5,8 +5,8 @@ use serde::Serialize;
 #[derive(Debug, Queryable, Insertable, Identifiable, Serialize)]
 pub struct Message {
     pub id: i32,
-    pub user_id: i32,
-    pub to_user_id: i32,
+    pub sender: i32,
+    pub receiver: i32,
     pub content: String,
     pub delivered: bool,
     pub created_at: chrono::NaiveDateTime,
@@ -39,7 +39,7 @@ pub struct NewMessagesArrayContent {
 #[derive(Insertable)]
 #[table_name = "messages"]
 pub struct CreateMessage {
-    pub user_id: i32,
-    pub to_user_id: i32,
+    pub sender: i32,
+    pub receiver: i32,
     pub content: String,
 }
