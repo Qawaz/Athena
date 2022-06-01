@@ -12,3 +12,4 @@ pub mod message_handlers;
 pub mod models;
 pub mod repositories;
 pub mod schema;
+pub mod utils;
