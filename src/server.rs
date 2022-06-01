@@ -48,15 +48,15 @@ pub struct PrivateMessage {
 pub struct PrivateMessageContent {
     pub local_id: Option<usize>,
     pub id: usize,
-    pub to_user_id: usize,
-    pub user_id: usize,
+    pub sender: usize,
+    pub receiver: usize,
     pub content: String,
     pub created_at: Option<String>,
 }
 
 impl PrivateMessageContent {
     pub fn set_sender_id_from_jwt(&mut self, user_id: usize) {
-        self.user_id = user_id
+        self.sender = user_id
     }
 }
 
@@ -118,14 +118,14 @@ impl ChatServer {
             data: PrivateMessageContent {
                 local_id: Some(0),
                 id: saved_message.id as usize,
-                user_id: saved_message.user_id as usize,
-                to_user_id: saved_message.to_user_id as usize,
+                sender: saved_message.sender as usize,
+                receiver: saved_message.receiver as usize,
                 content: saved_message.content.clone(),
                 created_at: Some(saved_message.created_at.to_string()),
             },
         };
 
-        if let Some(addr) = self.sessions.get(&(saved_message.to_user_id as usize)) {
+        if let Some(addr) = self.sessions.get(&(saved_message.receiver as usize)) {
             let _ = addr.do_send(Message(
                 serde_json::to_string(&broadcast_private_message).unwrap(),
             ));
@@ -142,14 +142,14 @@ impl ChatServer {
             data: PrivateMessageContent {
                 local_id,
                 id: saved_message.id as usize,
-                user_id: saved_message.user_id as usize,
-                to_user_id: saved_message.to_user_id as usize,
+                sender: saved_message.sender as usize,
+                receiver: saved_message.receiver as usize,
                 content: saved_message.content.clone(),
                 created_at: Some(saved_message.created_at.to_string()),
             },
         };
 
-        if let Some(addr) = self.sessions.get(&(saved_message.user_id as usize)) {
+        if let Some(addr) = self.sessions.get(&(saved_message.sender as usize)) {
             let _ = addr.do_send(Message(serde_json::to_string(&assigned_message).unwrap()));
         }
     }
@@ -268,8 +268,8 @@ impl Handler<PrivateMessage> for ChatServer {
     fn handle(&mut self, msg: PrivateMessage, _: &mut Context<Self>) {
         let saved_message = create_message(
             CreateMessage {
-                user_id: *&msg.data.user_id as i32,
-                to_user_id: *&msg.data.to_user_id as i32,
+                sender: *&msg.data.sender as i32,
+                receiver: *&msg.data.receiver as i32,
                 content: (*msg.data.content).to_string(),
             },
             &self.own_pool.get().unwrap(),

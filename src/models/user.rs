@@ -1,6 +1,7 @@
 use crate::schema::users;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 #[derive(Debug, Clone, Queryable, Identifiable, Serialize, Deserialize)]
 pub struct User {
@@ -18,6 +19,25 @@ pub struct User {
     pub updated_at: Option<NaiveDateTime>,
     #[serde(skip_serializing)]
     pub deleted_at: Option<NaiveDateTime>,
+}
+
+#[derive(Debug, Deserialize, Validate, Insertable, Serialize)]
+#[table_name = "users"]
+pub struct CreateUser {
+    #[validate(length(min = 3))]
+    pub username: String,
+    #[validate(email)]
+    pub email: String,
+    #[validate(length(min = 8))]
+    pub password: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CreateUserResponse {
+    pub user_id: i32,
+    pub username: String,
+    pub email: String,
+    pub avatar: String,
 }
 
 #[derive(Debug, Serialize)]

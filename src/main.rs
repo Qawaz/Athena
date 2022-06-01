@@ -10,7 +10,7 @@ use std::time::Instant;
 use actix::*;
 use actix_cors::Cors;
 use actix_web::web::Data;
-use actix_web::{get, http, web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{get, http, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
 use actix_web_httpauth::middleware::HttpAuthentication;
 use aws_config::meta::region::RegionProviderChain;
@@ -20,6 +20,7 @@ use diesel::r2d2::Pool;
 use diesel::PgConnection;
 use dotenv::dotenv;
 use session::WsChatSession;
+use whisper::controllers::auth_controller::{register, login, revoke_token};
 use whisper::controllers::profile_controller::{get_user_profile, set_status};
 use whisper::controllers::search_controller::search_users;
 use whisper::controllers::user_controller::{get_multiple_users, get_user_by_id, set_avatar};
@@ -30,6 +31,11 @@ mod server;
 mod session;
 
 embed_migrations!("./migrations");
+
+#[get("/")]
+async fn hello() -> impl Responder {
+    HttpResponse::Ok().body("Secret Keeper greats you")
+}
 
 /// Entry point for our websocket route
 #[get("/ws/")]
@@ -57,28 +63,18 @@ async fn main() -> std::io::Result<()> {
 
     dotenv().ok();
 
-    std::fs::create_dir_all("./tmp")?;
-
-    let gateway_database_url =
-        env::var("GATEWAY_DATABASE_URL").expect("GATEWAY_DATABASE_URL must be set");
-    let gateway_manager = ConnectionManager::<PgConnection>::new(gateway_database_url);
-
-    let gateway_pool = Pool::builder()
-        .build(gateway_manager)
-        .expect("Failed to create pool.");
-
-    let own_database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let own_manager = ConnectionManager::<PgConnection>::new(own_database_url);
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let connection_manager = ConnectionManager::<PgConnection>::new(database_url);
 
     let own_pool = Pool::builder()
-        .build(own_manager)
+        .build(connection_manager)
         .expect("Failed to create pool.");
 
     embedded_migrations::run(&own_pool.get().expect("cant get connection pool")).unwrap();
 
     let own_pool_clone = own_pool.clone();
     let addr = Data::new(SyncArbiter::start(12, move || {
-        DbExecutor(own_pool_clone.clone(), gateway_pool.clone())
+        DbExecutor(own_pool_clone.clone())
     }));
 
     // Start chat server actor
@@ -115,6 +111,11 @@ async fn main() -> std::io::Result<()> {
             .app_data(addr.clone())
             .app_data(server.clone())
             .app_data(s3_client.clone())
+            .service(hello)
+            .service(web::scope("/auth")
+                    .service(register)
+                    .service(login)
+                    .service(revoke_token))
             .service(web::scope("/search").service(search_users))
             .service(web::scope("/profiles").service(get_user_profile))
             .service(web::scope("/profile").service(set_status))

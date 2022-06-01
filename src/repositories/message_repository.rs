@@ -15,7 +15,7 @@ pub fn get_unreceived_new_messages(
     conn: &PgConnection,
 ) -> QueryResult<Vec<Message>> {
     messages
-        .filter(to_user_id.eq(target_user_id))
+        .filter(receiver.eq(target_user_id))
         .filter(delivered.eq(false))
         .get_results(conn)
 }

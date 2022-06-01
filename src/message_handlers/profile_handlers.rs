@@ -17,11 +17,11 @@ impl Handler<GetUserProfile> for DbExecutor {
         profile_request: GetUserProfile,
         _: &mut SyncContext<Self>,
     ) -> Self::Result {
-        let own_conn: &PgConnection = &self.0.get().unwrap();
+        let connection: &PgConnection = &self.0.get().unwrap();
 
         let profile = profiles
             .filter(user_id.eq(profile_request.id as i32))
-            .first(own_conn)?;
+            .first(connection)?;
 
         Ok(profile)
     }
@@ -39,11 +39,11 @@ impl Handler<SetStatusRequest> for DbExecutor {
         set_status_request: SetStatusRequest,
         _: &mut SyncContext<Self>,
     ) -> Self::Result {
-        let own_conn: &PgConnection = &self.0.get().unwrap();
+        let connection: &PgConnection = &self.0.get().unwrap();
 
         let update_status = diesel::update(profiles.filter(user_id.eq(set_status_request.sender)))
             .set(status.eq(set_status_request.status))
-            .execute(own_conn)?;
+            .execute(connection)?;
 
         if update_status == 0 {
             return Err(ServiceError::Forbidden);
