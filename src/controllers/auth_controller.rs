@@ -6,6 +6,7 @@ use actix_web::{
     HttpResponse, Responder,
 };
 use actix_web_validator::Json;
+use crate::models::token::VerifyTokenRequest;
 use crate::{
     db::DbExecutor,
     errors::ServiceError,
@@ -33,6 +34,19 @@ pub async fn register(
 #[post("/signin")]
 async fn login((creds, addr): (web::Json<LoginRequest>, Data<Addr<DbExecutor>>)) -> impl Responder {
     let actix_message = addr.send(creds.into_inner()).await;
+    let result = actix_message.unwrap();
+
+    match result {
+        Ok(response) => HttpResponse::Ok().json(response),
+        Err(error) => ServiceError::error_response(&error),
+    }
+}
+
+#[post("/verify-token")]
+async fn verify_token(
+    (verify_token_request, addr): (web::Json<VerifyTokenRequest>, Data<Addr<DbExecutor>>),
+) -> impl Responder {
+    let actix_message = addr.send(verify_token_request.into_inner()).await;
     let result = actix_message.unwrap();
 
     match result {
