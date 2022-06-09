@@ -23,6 +23,11 @@ pub struct CreateJWT {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct VerifyTokenRequest {
+    pub access_token: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct RevokeTokenRequest {
     pub refresh_token: String,
 }
