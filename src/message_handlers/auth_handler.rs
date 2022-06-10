@@ -6,9 +6,9 @@ use crate::{models::token::RevokeTokenRequest, schema::users::dsl::*};
 use actix::{Handler, Message, SyncContext};
 use blake3::Hasher;
 use chrono::NaiveDateTime;
-use diesel::{RunQueryDsl, select};
-use diesel::dsl::exists;
+use diesel::dsl::{exists, now};
 use diesel::{result::Error, PgConnection, QueryDsl};
+use diesel::{select, RunQueryDsl};
 use jsonwebtoken::{Algorithm, Header};
 
 use crate::{
@@ -16,7 +16,7 @@ use crate::{
     errors::ServiceError,
     models::{
         auth::{LoginRequest, LoginResponse},
-        user::{User, CreateUserResponse},
+        user::{CreateUserResponse, User},
     },
     schema::users::username,
 };
@@ -75,7 +75,6 @@ impl Handler<LoginRequest> for DbExecutor {
     }
 }
 
-
 impl Message for VerifyTokenRequest {
     type Result = Result<String, ServiceError>;
 }
@@ -90,9 +89,12 @@ impl Handler<VerifyTokenRequest> for DbExecutor {
     ) -> Self::Result {
         let conn: &PgConnection = &self.0.get().unwrap();
 
-        let is_token_exists = select(exists(jwt_tokens.filter(access_token.eq(verify_token_request.access_token)))).get_result(conn);
-
-        println!("{:?}", is_token_exists);
+        let is_token_exists = select(exists(
+            jwt_tokens
+                .filter(access_token.eq(verify_token_request.access_token))
+                .filter(access_token_expires_at.gt(now)),
+        ))
+        .get_result(conn);
 
         if Ok(true) == is_token_exists {
             Ok("token is valid".to_string())
