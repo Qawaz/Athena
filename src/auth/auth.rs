@@ -76,7 +76,7 @@ pub fn create_jwt(
         exp: refresh_token_expiration as usize,
     };
 
-    let header = Header::new(Algorithm::HS512);
+    let header = Header::new(Algorithm::HS384);
 
     let access_token = encode(
         &header,
@@ -119,7 +119,7 @@ pub async fn authorize(token: &str) -> Result<Vec<String>, ServiceError> {
     let decoded = decode::<Claims>(
         &token,
         &DecodingKey::from_secret(&jwt_access_token_secret.into_bytes()),
-        &Validation::new(Algorithm::HS512),
+        &Validation::new(Algorithm::HS384),
     );
     // .map_err(|_| ServiceError::Unauthorized);
 

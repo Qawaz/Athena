@@ -39,7 +39,7 @@ impl Handler<LoginRequest> for DbExecutor {
             .filter(username.eq(&creds.username))
             .load::<User>(conn)?;
 
-        let mut header = Header::new(Algorithm::HS512);
+        let mut header = Header::new(Algorithm::HS384);
         header.kid = Some("blabla".to_owned());
 
         if let Some(user) = found_users.pop() {
