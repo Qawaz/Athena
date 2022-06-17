@@ -41,7 +41,7 @@ impl FromRequest for Auth {
                 let decoded = decode::<Claims>(
                     &jwt,
                     &DecodingKey::from_secret(jwt_secret.as_bytes()),
-                    &Validation::new(Algorithm::HS512),
+                    &Validation::new(Algorithm::HS384),
                 )
                 .unwrap();
                 return ok(Auth {
@@ -77,7 +77,7 @@ pub async fn authorize(token: &str) -> Result<Vec<String>, ServiceError> {
     let decoded = decode::<Claims>(
         &token,
         &DecodingKey::from_secret(&jwt_access_token_secret.into_bytes()),
-        &Validation::new(Algorithm::HS512),
+        &Validation::new(Algorithm::HS384),
     );
     // .map_err(|_| ServiceError::Unauthorized);
 

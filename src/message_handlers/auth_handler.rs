@@ -1,12 +1,14 @@
 use crate::auth::auth::{create_jwt, Role};
 use crate::diesel::ExpressionMethods;
+use crate::models::token::VerifyTokenRequest;
 use crate::schema::jwt_tokens::dsl::*;
 use crate::{models::token::RevokeTokenRequest, schema::users::dsl::*};
 use actix::{Handler, Message, SyncContext};
 use blake3::Hasher;
 use chrono::NaiveDateTime;
-use diesel::RunQueryDsl;
+use diesel::dsl::{exists, now};
 use diesel::{result::Error, PgConnection, QueryDsl};
+use diesel::{select, RunQueryDsl};
 use jsonwebtoken::{Algorithm, Header};
 
 use crate::{
@@ -14,7 +16,7 @@ use crate::{
     errors::ServiceError,
     models::{
         auth::{LoginRequest, LoginResponse},
-        user::{User, CreateUserResponse},
+        user::{CreateUserResponse, User},
     },
     schema::users::username,
 };
@@ -37,7 +39,7 @@ impl Handler<LoginRequest> for DbExecutor {
             .filter(username.eq(&creds.username))
             .load::<User>(conn)?;
 
-        let mut header = Header::new(Algorithm::HS512);
+        let mut header = Header::new(Algorithm::HS384);
         header.kid = Some("blabla".to_owned());
 
         if let Some(user) = found_users.pop() {
@@ -70,6 +72,35 @@ impl Handler<LoginRequest> for DbExecutor {
         }
 
         Err(ServiceError::Unauthorized)
+    }
+}
+
+impl Message for VerifyTokenRequest {
+    type Result = Result<String, ServiceError>;
+}
+
+impl Handler<VerifyTokenRequest> for DbExecutor {
+    type Result = Result<String, ServiceError>;
+
+    fn handle(
+        &mut self,
+        verify_token_request: VerifyTokenRequest,
+        _: &mut SyncContext<Self>,
+    ) -> Self::Result {
+        let conn: &PgConnection = &self.0.get().unwrap();
+
+        let is_token_exists = select(exists(
+            jwt_tokens
+                .filter(access_token.eq(verify_token_request.access_token))
+                .filter(access_token_expires_at.gt(now)),
+        ))
+        .get_result(conn);
+
+        if Ok(true) == is_token_exists {
+            Ok("token is valid".to_string())
+        } else {
+            Err(ServiceError::Unauthorized)
+        }
     }
 }
 
