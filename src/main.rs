@@ -95,6 +95,7 @@ async fn main() -> std::io::Result<()> {
     // Create Http server with websocket support
     HttpServer::new(move || {
         let cors = Cors::default()
+            .allow_any_origin()
             .allow_any_method()
             .allowed_headers(vec![
                 http::header::AUTHORIZATION,
