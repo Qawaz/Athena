@@ -1,6 +1,8 @@
 use crate::errors::ServiceError;
-use crate::models::profile::{Profile, CreateProfile};
-use crate::models::user::{Counters, ProfileAPI, SetAvatarRequest, User, UserAPIWithoutCounters, CreateUser};
+use crate::models::profile::{CreateProfile, Profile};
+use crate::models::user::{
+    Counters, CreateUser, ProfileAPI, SetAvatarRequest, User, UserAPIWithoutCounters,
+};
 use crate::models::user_requests::{GetMultipleUsers, GetUserByIDReq};
 use crate::schema::profiles::dsl::*;
 use crate::schema::users::dsl::*;
@@ -18,7 +20,6 @@ impl Handler<CreateUser> for DbExecutor {
     type Result = Result<User, ServiceError>;
 
     fn handle(&mut self, mut new_user: CreateUser, _: &mut SyncContext<Self>) -> Self::Result {
-        
         let connection: &PgConnection = &self.0.get().unwrap();
 
         let mut hasher = Hasher::new();
@@ -26,7 +27,7 @@ impl Handler<CreateUser> for DbExecutor {
         hasher.update(&new_user.password.as_bytes());
 
         new_user.password = hasher.finalize().to_hex().chars().collect();
-        
+
         let inserted_user: User = diesel::insert_into(users)
             .values(&new_user)
             .get_result(connection)?;
@@ -38,7 +39,7 @@ impl Handler<CreateUser> for DbExecutor {
                 status: "".to_string(),
                 description: "".to_string(),
             })
-            .execute(connection);
+            .execute(connection)?;
 
         Ok(inserted_user)
     }
