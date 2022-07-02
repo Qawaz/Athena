@@ -36,7 +36,8 @@ impl Handler<LoginRequest> for DbExecutor {
         hasher.update(&creds.password.as_bytes());
 
         let mut found_users = users
-            .filter(username.eq(&creds.username))
+            .filter(username.eq(&creds.username_or_email))
+            .or_filter(email.eq(&creds.username_or_email))
             .load::<User>(conn)?;
 
         let mut header = Header::new(Algorithm::HS384);
