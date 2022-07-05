@@ -1,3 +1,9 @@
+use crate::models::token::VerifyTokenRequest;
+use crate::{
+    db::DbExecutor,
+    errors::ServiceError,
+    models::{auth::LoginRequest, token::RevokeTokenRequest, user::CreateUser},
+};
 use actix::Addr;
 use actix_web::ResponseError;
 use actix_web::{
@@ -6,12 +12,6 @@ use actix_web::{
     HttpResponse, Responder,
 };
 use actix_web_validator::Json;
-use crate::models::token::VerifyTokenRequest;
-use crate::{
-    db::DbExecutor,
-    errors::ServiceError,
-    models::{auth::LoginRequest, token::RevokeTokenRequest, user::CreateUser},
-};
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -33,6 +33,8 @@ pub async fn register(
 
 #[post("/signin")]
 async fn login((creds, addr): (web::Json<LoginRequest>, Data<Addr<DbExecutor>>)) -> impl Responder {
+    println!("{:?}", creds);
+
     let actix_message = addr.send(creds.into_inner()).await;
     let result = actix_message.unwrap();
 
