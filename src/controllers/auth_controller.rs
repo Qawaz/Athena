@@ -1,3 +1,9 @@
+use crate::models::token::VerifyTokenRequest;
+use crate::{
+    db::DbExecutor,
+    errors::ServiceError,
+    models::{auth::LoginRequest, token::RevokeTokenRequest, user::CreateUser},
+};
 use actix::Addr;
 use actix_web::ResponseError;
 use actix_web::{
@@ -6,12 +12,6 @@ use actix_web::{
     HttpResponse, Responder,
 };
 use actix_web_validator::Json;
-use crate::models::token::VerifyTokenRequest;
-use crate::{
-    db::DbExecutor,
-    errors::ServiceError,
-    models::{auth::LoginRequest, token::RevokeTokenRequest, user::CreateUser},
-};
 
 #[get("/")]
 async fn hello() -> impl Responder {
