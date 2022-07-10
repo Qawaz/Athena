@@ -33,8 +33,6 @@ pub async fn register(
 
 #[post("/signin")]
 async fn login((creds, addr): (web::Json<LoginRequest>, Data<Addr<DbExecutor>>)) -> impl Responder {
-    println!("{:?}", creds);
-
     let actix_message = addr.send(creds.into_inner()).await;
     let result = actix_message.unwrap();
 
