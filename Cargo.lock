@@ -86,7 +86,7 @@ checksum = "30dbd116ef7532f56e2f6d7c511736ea0b124d914ee8820a5271247bf89f06aa"
 dependencies = [
  "actix-service 2.0.2",
  "actix-utils 3.0.0",
- "actix-web 4.0.1",
+ "actix-web 4.1.0",
  "derive_more",
  "futures-util",
  "log",
@@ -235,7 +235,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c9edfb0e7663d7fe18c8d5b668c9c1bcf79176b1dcc9d4da9592503209a6bfb0"
 dependencies = [
  "actix-utils 3.0.0",
- "actix-web 4.0.1",
+ "actix-web 4.1.0",
  "bytes 1.1.0",
  "derive_more",
  "futures-core",
@@ -469,9 +469,9 @@ dependencies = [
 
 [[package]]
 name = "actix-web"
-version = "4.0.1"
+version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4e5ebffd51d50df56a3ae0de0e59487340ca456f05dd0b90c0a7a6dd6a74d31"
+checksum = "a27e8fe9ba4ae613c21f677c2cfaf0696c3744030c6f485b34634e502d6bb379"
 dependencies = [
  "actix-codec 0.5.0",
  "actix-http 3.0.0",
@@ -516,7 +516,7 @@ dependencies = [
  "actix",
  "actix-codec 0.5.0",
  "actix-http 3.0.0",
- "actix-web 4.0.1",
+ "actix-web 4.1.0",
  "bytes 1.1.0",
  "bytestring",
  "futures-core",
@@ -554,7 +554,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b93142682856a6404ebd64aadc5ed156fb4c229bb2ae7df12ec62686b7bceaaf"
 dependencies = [
  "actix-grants-proc-macro",
- "actix-web 4.0.1",
+ "actix-web 4.1.0",
 ]
 
 [[package]]
@@ -565,7 +565,7 @@ checksum = "08c25a48b4684f90520183cd1a688e5f4f7e9905835fa75d02c0fe4f60fcdbe6"
 dependencies = [
  "actix-service 2.0.2",
  "actix-utils 3.0.0",
- "actix-web 4.0.1",
+ "actix-web 4.1.0",
  "base64",
  "futures-core",
  "futures-util",
@@ -580,7 +580,7 @@ checksum = "fe9699f456ec129158193c11b0f26ce24f6c91c30dd383c5f7d0d33dc069be0c"
 dependencies = [
  "actix-http 3.0.0",
  "actix-router 0.5.0",
- "actix-web 4.0.1",
+ "actix-web 4.1.0",
  "bytes 1.1.0",
  "derive_more",
  "futures",
@@ -2783,7 +2783,7 @@ version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9dfafda9a9479d9ac6188b6fc1f84b850cd3f3b5faff6d13e6e45d1296e92ee8"
 dependencies = [
- "actix-web 4.0.1",
+ "actix-web 4.1.0",
  "futures",
  "percent-encoding",
  "serde",
@@ -3647,7 +3647,7 @@ dependencies = [
  "actix-cors",
  "actix-files",
  "actix-multipart",
- "actix-web 4.0.1",
+ "actix-web 4.1.0",
  "actix-web-actors",
  "actix-web-grants",
  "actix-web-httpauth",
