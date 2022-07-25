@@ -5,13 +5,11 @@ extern crate diesel;
 extern crate whisper;
 
 use std::env;
-use std::time::Instant;
 
 use actix::*;
 use actix_cors::Cors;
 use actix_web::web::Data;
 use actix_web::{get, http, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
-use actix_web_actors::ws;
 use actix_web_httpauth::middleware::HttpAuthentication;
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_s3::{Client, Endpoint};
@@ -19,7 +17,9 @@ use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel::PgConnection;
 use dotenv::dotenv;
-use session::WsChatSession;
+use server::{ChatServer, ChatServerHandle};
+use tokio::task::spawn_local;
+use tokio::try_join;
 use whisper::controllers::auth_controller::{login, register, revoke_token, verify_token};
 use whisper::controllers::profile_controller::{get_user_profile, set_status};
 use whisper::controllers::search_controller::search_users;
@@ -27,8 +27,8 @@ use whisper::controllers::user_controller::{get_multiple_users, get_user_by_id, 
 use whisper::db::DbExecutor;
 use whisper::extractors::http_auth_extractor::http_auth_extract;
 use whisper::extractors::jwt_data_decode::Auth;
+mod handler;
 mod server;
-mod session;
 
 embed_migrations!("./migrations");
 
@@ -37,23 +37,24 @@ async fn hello() -> impl Responder {
     HttpResponse::Ok().body("Secret Keeper greats you")
 }
 
-/// Entry point for our websocket route
-#[get("/ws/")]
-async fn chat_route(
+/// Handshake and start WebSocket handler with heartbeats.
+async fn chat_ws(
     req: HttpRequest,
     stream: web::Payload,
-    srv: web::Data<Addr<server::ChatServer>>,
+    chat_server: web::Data<ChatServerHandle>,
     sub: Auth,
 ) -> Result<HttpResponse, Error> {
-    ws::start(
-        WsChatSession {
-            id: sub.user_id as usize,
-            hb: Instant::now(),
-            addr: srv.get_ref().clone(),
-        },
-        &req,
-        stream,
-    )
+    let (res, session, msg_stream) = actix_ws::handle(&req, stream)?;
+
+    // spawn websocket handler (and don't await it) so that the response is returned immediately
+    spawn_local(handler::chat_ws(
+        (**chat_server).clone(),
+        session,
+        msg_stream,
+        sub.user_id as usize,
+    ));
+
+    Ok(res)
 }
 
 #[actix_web::main]
@@ -78,7 +79,7 @@ async fn main() -> std::io::Result<()> {
     }));
 
     // Start chat server actor
-    let server = Data::new(server::ChatServer::new(own_pool.clone()).start());
+    // let server = Data::new(server::ChatServer::new(own_pool.clone()).start());
 
     // AWS S3
     let s3_endpoint = env::var("AWS_ENDPOINT").expect("no endpoint defined for s3");
@@ -92,8 +93,12 @@ async fn main() -> std::io::Result<()> {
 
     let s3_client = Data::new(Client::new(&config));
 
+    let (chat_server, server_tx) = ChatServer::new(own_pool.clone());
+
+    let chat_server = spawn(chat_server.run());
+
     // Create Http server with websocket support
-    HttpServer::new(move || {
+    let http_server = HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()
             .allow_any_method()
@@ -110,8 +115,8 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(cors)
             .app_data(addr.clone())
-            .app_data(server.clone())
             .app_data(s3_client.clone())
+            .app_data(web::Data::new(server_tx.clone()))
             .service(hello)
             .service(
                 web::scope("/auth")
@@ -131,11 +136,15 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("")
                     .wrap(auth)
-                    .service(chat_route)
+                    .service(web::resource("/ws/").route(web::get().to(chat_ws)))
                     .service(set_avatar),
             )
     })
+    .workers(2)
     .bind(("localhost", 3335))?
-    .run()
-    .await
+    .run();
+
+    try_join!(http_server, async move { chat_server.await.unwrap() })?;
+
+    Ok(())
 }
