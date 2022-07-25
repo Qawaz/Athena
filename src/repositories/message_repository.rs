@@ -1,6 +1,7 @@
 use crate::models::message::{CreateMessage, Message};
 use crate::schema::messages;
 use crate::schema::messages::dsl::*;
+use chrono::Utc;
 use diesel;
 use diesel::prelude::*;
 
@@ -40,4 +41,10 @@ pub fn get_messages_by_ids(
     messages
         .filter(id.eq_any(message_ids))
         .load::<Message>(&*connection)
+}
+
+pub fn delete_messages(message_ids: &Vec<i32>, connection: &PgConnection) -> QueryResult<usize> {
+    diesel::update(messages.filter(id.eq_any(message_ids)))
+        .set(deleted_at.eq(Utc::now().naive_utc()))
+        .execute(connection)
 }
