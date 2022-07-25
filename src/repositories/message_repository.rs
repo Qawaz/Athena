@@ -32,3 +32,12 @@ pub fn update_delivery_message_status(
 pub fn get_messages(connection: &PgConnection) -> QueryResult<Vec<Message>> {
     messages.limit(5).load::<Message>(&*connection)
 }
+
+pub fn get_messages_by_ids(
+    message_ids: &Vec<i32>,
+    connection: &PgConnection,
+) -> QueryResult<Vec<Message>> {
+    messages
+        .filter(id.eq_any(message_ids))
+        .load::<Message>(&*connection)
+}
