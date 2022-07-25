@@ -15,7 +15,11 @@ use whisper::{
         message::{CreateMessage, NewMessagesArray, NewMessagesArrayContent},
     },
     repositories::message_repository::{
-        create_message, get_unreceived_new_messages, update_delivery_message_status,
+        create_message, delete_messages, get_messages_by_ids, get_unreceived_new_messages,
+        update_delivery_message_status,
+    },
+    types::ws_server_events::{
+        DestroyMessage, DestroyMessageDeliveryToReceiver, DestroyMessageDeliveryToReceiverContent,
     },
 };
 
@@ -317,6 +321,24 @@ impl ChatServer {
 
                             self.send_verified_delivery_report(delivery_report)
                         }
+                        Some("destroy-message") => {
+                            let destory_message: DestroyMessage =
+                                serde_json::from_str(&msg).unwrap();
+
+                            let policy_check =
+                                destory_message.data.messages.iter().all(|message| {
+                                    message.sender == jwt_user_id
+                                // all of the receiver id for each message should be same - in official mobile
+                                // and web application you can not select multiple message from others chats to
+                                // delete , thats why we never handle those custon requests
+                                && message.receiver == destory_message.data.messages[0].receiver
+                                });
+
+                            // Policy Error: message is not belong for authenticated user
+                            if policy_check == true {
+                                self.destory_messages(destory_message);
+                            }
+                        }
                         _ => println!("Unknown Action"),
                     }
                     let _ = res_tx.send(());
@@ -325,6 +347,49 @@ impl ChatServer {
         }
 
         Ok(())
+    }
+
+    fn destory_messages(&self, destroy_message_request: DestroyMessage) {
+        let connection = &self.own_pool.get().unwrap();
+
+        let message_ids: Vec<i32> = destroy_message_request
+            .data
+            .messages
+            .iter()
+            .map(|message| message.id as i32)
+            .collect();
+
+        let get_messages = get_messages_by_ids(&message_ids, connection);
+
+        match get_messages {
+            Ok(messages) => {
+                let verified_message_ids: Vec<i32> =
+                    messages.iter().map(|message| message.id as i32).collect();
+
+                let delete_messages = delete_messages(&verified_message_ids, connection);
+
+                match delete_messages {
+                    Ok(_v) => {
+                        if let Some(tx) = self.sessions.get(&(messages[0].receiver as usize)) {
+                            let send_delivery_destroy_messages_to_receiver =
+                                DestroyMessageDeliveryToReceiver {
+                                    event: "destroy-messages-to-receiver".to_string(),
+                                    data: DestroyMessageDeliveryToReceiverContent {
+                                        message_ids: verified_message_ids,
+                                    },
+                                };
+
+                            let _ = tx.send(
+                                serde_json::to_string(&send_delivery_destroy_messages_to_receiver)
+                                    .unwrap(),
+                            );
+                        }
+                    }
+                    Err(error) => println!("{:?}", error),
+                }
+            }
+            Err(error) => println!("{:?}", error),
+        };
     }
 }
 
