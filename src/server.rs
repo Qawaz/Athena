@@ -149,19 +149,6 @@ impl ChatServer {
 }
 
 impl ChatServer {
-    /// Send message to target user
-    // fn send_message(&self, room: &str, message: &str, skip_id: usize) {
-    //     if let Some(sessions) = self.rooms.get(room) {
-    //         for id in sessions {
-    //             if *id != skip_id {
-    //                 if let Some(addr) = self.sessions.get(id) {
-    //                     let _ = addr.do_send(Message(message.to_owned()));
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
     // Send verified delivery report
     fn send_verified_delivery_report(&self, delivery_report: DeliveryReport) {
         let query_result = update_delivery_message_status(
@@ -327,11 +314,6 @@ impl ChatServer {
                                 serde_json::from_str(&msg).unwrap();
 
                             delivery_report.data.set_sender_id_from_jwt(jwt_user_id);
-
-                            // println!(
-                            //     "the fucking incoming delivery-report happend {:?}",
-                            //     self.id
-                            // );
 
                             self.send_verified_delivery_report(delivery_report)
                         }
