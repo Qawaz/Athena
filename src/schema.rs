@@ -25,6 +25,7 @@ table! {
         receiver -> Int4,
         content -> Varchar,
         delivered -> Bool,
+        deleted_delivered -> Bool,
         created_at -> Timestamp,
         updated_at -> Nullable<Timestamp>,
         deleted_at -> Nullable<Timestamp>,
