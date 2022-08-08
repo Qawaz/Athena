@@ -9,6 +9,7 @@ pub struct Message {
     pub receiver: i32,
     pub content: String,
     pub delivered: bool,
+    pub deleted_delivered: bool,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: Option<chrono::NaiveDateTime>,
     pub deleted_at: Option<chrono::NaiveDateTime>,
@@ -42,4 +43,28 @@ pub struct CreateMessage {
     pub sender: i32,
     pub receiver: i32,
     pub content: String,
+}
+
+// Structs for new deleted message
+
+#[derive(Debug, Serialize)]
+pub struct NewDeletedMessagesArray {
+    pub event: String,
+    pub data: NewDeletedMessagesArrayContent,
+}
+
+impl Default for NewDeletedMessagesArray {
+    fn default() -> NewDeletedMessagesArray {
+        NewDeletedMessagesArray {
+            event: "new-deleted-messages-array".to_string(),
+            data: NewDeletedMessagesArrayContent {
+                messages_ids: Vec::new(),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct NewDeletedMessagesArrayContent {
+    pub messages_ids: Vec<i32>,
 }
