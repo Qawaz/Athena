@@ -44,3 +44,27 @@ pub struct CreateMessage {
     pub receiver: i32,
     pub content: String,
 }
+
+// Structs for new deleted message
+
+#[derive(Debug, Serialize)]
+pub struct NewDeletedMessagesArray {
+    pub event: String,
+    pub data: NewDeletedMessagesArrayContent,
+}
+
+impl Default for NewDeletedMessagesArray {
+    fn default() -> NewDeletedMessagesArray {
+        NewDeletedMessagesArray {
+            event: "new-deleted-messages-array".to_string(),
+            data: NewDeletedMessagesArrayContent {
+                messages_ids: Vec::new(),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct NewDeletedMessagesArrayContent {
+    pub messages_ids: Vec<i32>,
+}
