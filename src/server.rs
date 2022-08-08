@@ -11,11 +11,15 @@ use tokio::sync::{mpsc, oneshot};
 use whisper::{
     models::{
         self,
-        delivery_report::DeliveryReport,
-        message::{CreateMessage, NewMessagesArray, NewMessagesArrayContent},
+        delivery_report::{DeliveryDeletedReport, DeliveryReport},
+        message::{
+            CreateMessage, NewDeletedMessagesArray, NewDeletedMessagesArrayContent,
+            NewMessagesArray, NewMessagesArrayContent,
+        },
     },
     repositories::message_repository::{
-        create_message, delete_messages, get_messages_by_ids, get_unreceived_new_messages,
+        create_message, delete_messages, get_messages_by_ids, get_unreceived_new_deleted_messages,
+        get_unreceived_new_messages, update_delivery_deleted_status,
         update_delivery_message_status,
     },
     types::ws_server_events::{
@@ -154,6 +158,15 @@ impl ChatServer {
 
 impl ChatServer {
     // Send verified delivery report
+    fn handle_delivery_deleted_message(&self, delivery_deleted: DeliveryDeletedReport) {
+        let query_result = update_delivery_deleted_status(
+            &delivery_deleted.data.ids,
+            &self.own_pool.get().unwrap(),
+        )
+        .unwrap();
+    }
+
+    // Send verified delivery report
     fn send_verified_delivery_report(&self, delivery_report: DeliveryReport) {
         let query_result = update_delivery_message_status(
             &delivery_report.data.ids,
@@ -193,6 +206,35 @@ impl ChatServer {
         }
     }
 
+    /// Send verified delivery report
+    fn send_new_deleted_messages(&self, user_id: usize) {
+        if let Some(tx) = self.sessions.get(&user_id) {
+            let get_new_deleted_messages = get_unreceived_new_deleted_messages(
+                user_id.try_into().unwrap(),
+                &self.own_pool.get().unwrap(),
+            );
+
+            let new_deleted_messages_counts =
+                get_new_deleted_messages.as_ref().unwrap().iter().count();
+            println!(
+                "get fucking new deleted messages ids {:?} :",
+                get_new_deleted_messages
+            );
+
+            if new_deleted_messages_counts > 0 {
+                let _send = tx.send(
+                    serde_json::to_string(&NewDeletedMessagesArray {
+                        data: NewDeletedMessagesArrayContent {
+                            messages_ids: get_new_deleted_messages.unwrap(),
+                        },
+                        ..Default::default()
+                    })
+                    .unwrap(),
+                );
+            }
+        }
+    }
+
     async fn connect(&mut self, tx: mpsc::UnboundedSender<Msg>, jwt_user_id: usize) -> SessionID {
         println!("Someone joined: {:?}", tx);
 
@@ -201,6 +243,8 @@ impl ChatServer {
         self.sessions.insert(jwt_user_id, tx);
 
         self.send_new_unreceived_messages(jwt_user_id);
+
+        self.send_new_deleted_messages(jwt_user_id);
 
         // send id back
         id
@@ -338,6 +382,14 @@ impl ChatServer {
                             if policy_check == true {
                                 self.destory_messages(destory_message);
                             }
+                        }
+                        Some("delivery-deleted-message") => {
+                            let mut delivery_deleted: DeliveryDeletedReport =
+                                serde_json::from_str(&msg).unwrap();
+
+                            delivery_deleted.data.set_sender_id_from_jwt(jwt_user_id);
+
+                            self.handle_delivery_deleted_message(delivery_deleted)
                         }
                         _ => println!("Unknown Action"),
                     }
