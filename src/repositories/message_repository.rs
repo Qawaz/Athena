@@ -59,3 +59,12 @@ pub fn delete_messages(message_ids: &Vec<i32>, connection: &PgConnection) -> Que
         .set(deleted_at.eq(Utc::now().naive_utc()))
         .execute(connection)
 }
+
+pub fn update_delivery_deleted_status(
+    message_ids: &Vec<i32>,
+    conn: &PgConnection,
+) -> QueryResult<usize> {
+    diesel::update(messages.filter(id.eq_any(message_ids)))
+        .set(deleted_delivered.eq(true))
+        .execute(conn)
+}
