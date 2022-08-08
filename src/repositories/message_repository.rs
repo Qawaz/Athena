@@ -21,6 +21,17 @@ pub fn get_unreceived_new_messages(
         .get_results(conn)
 }
 
+pub fn get_unreceived_new_deleted_messages(
+    target_user_id: i32,
+    conn: &PgConnection,
+) -> QueryResult<Vec<i32>> {
+    messages
+        .select(id)
+        .filter(receiver.eq(target_user_id))
+        .filter(deleted_delivered.eq(false))
+        .get_results(conn)
+}
+
 pub fn update_delivery_message_status(
     message_ids: &Vec<i32>,
     conn: &PgConnection,
