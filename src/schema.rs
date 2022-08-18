@@ -8,6 +8,19 @@ table! {
 }
 
 table! {
+    gossips (id) {
+        id -> Int4,
+        user_id -> Int4,
+        kind -> Nullable<Varchar>,
+        target_id -> Nullable<Int4>,
+        last_message_id -> Int4,
+        unread_messages -> Int4,
+        created_at -> Timestamp,
+        updated_at -> Nullable<Timestamp>,
+    }
+}
+
+table! {
     jwt_tokens (id) {
         id -> Int4,
         user_id -> Int4,
@@ -59,10 +72,4 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(
-    followers,
-    jwt_tokens,
-    messages,
-    profiles,
-    users,
-);
+allow_tables_to_appear_in_same_query!(followers, gossips, jwt_tokens, messages, profiles, users,);

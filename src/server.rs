@@ -268,6 +268,8 @@ impl ChatServer {
     }
 
     pub async fn send_private_message(&self, private_message: PrivateMessage) {
+        
+        // Save message in database
         let saved_message = create_message(
             CreateMessage {
                 sender: *&private_message.data.sender as i32,
@@ -277,6 +279,9 @@ impl ChatServer {
             &self.own_pool.get().unwrap(),
         )
         .unwrap();
+
+        // update gossip conversation
+        
 
         let broadcast_private_message = PrivateMessage {
             event: "message".to_owned(),
